@@ -10,7 +10,7 @@ Aiko will receive the link beforehand and watch the countdown from afar. She'll 
 
 - **Primary device**: Mobile phone
 - **Audience**: Aiko (single viewer)
-- **Countdown target**: April 1, 2026 at 23:00 (timezone TBD — Brian to confirm which timezone: his, Aiko's, or a fixed one like US Pacific)
+- **Countdown target**: April 1, 2026 at 23:00 US Pacific (America/Los_Angeles)
 - **Artwork source**: `/mnt/nas3/brian/Brian Pham - Personal/Photo and Memories/Aiko/` — ~25 PNG images including character design sheets, colored illustrations, and manga panel pages
 
 ## Page Structure (Pre-Countdown)
@@ -66,7 +66,9 @@ When the countdown reaches zero, the page transforms:
 
 1. **Animation**: The page fades to white/bright, then the cover image scales up from center with a soft glow — total duration ~2 seconds. CSS keyframe animation, no JS animation library needed.
 2. **Cover image**: The Snorlax hoodie cuddling illustration (`68D955D4-3FAD-4A96-840E-EE1708EA59C5.PNG`) displayed as the official manga cover, framed with a decorative border
-3. **Personal message**: A heartfelt note from Brian to Aiko fades in below the cover after a short delay. **Brian to provide the message text before launch.**
+3. **Personal message**: The following note from Brian fades in below the cover after a short delay:
+
+> I thank God for the many blessings I've received and amongst some of the best blessings like my mom's love and her health, my family's well being and health, business being afloat and my strength and health to continue onwards... is one blessing that I don't think anyone expected and that's the blessing of reconnecting with you because since that moment, life has been fulfilling and I find happiness and joy whenever I'm chatting with you, or thinking about you. As we continue to grow, I pray that my love for you matures and I pray that our focus on health and happiness only changes for the better. I pray that I never forget that my goal is to make our lives better and if I ever forget, or my actions do not reflect that, that I am reminded so that I can switch gears into actions that align with a healthy life for us. If you're reading this, that means we're reunited physically... so I won't drag this out so I can let you go back to spending time. Have fun ;)
 4. **State change**: The countdown section transforms to "NOW AVAILABLE — VOLUME 1" and the timer is replaced with a release confirmation
 
 The reveal should feel like unwrapping a gift — not instant, but a brief, satisfying animation. The pre-countdown sections (synopsis, characters, preview) remain scrollable below.
