@@ -495,12 +495,29 @@
   // Mobile Nav
   // ============================================
   function initNav() {
+    var archiveSection = $('archive-section');
+
     $('nav-toggle').addEventListener('click', function () {
       document.querySelector('.header-nav').classList.toggle('open');
     });
+
     document.querySelectorAll('.header-nav a').forEach(function (a) {
-      a.addEventListener('click', function () {
+      a.addEventListener('click', function (e) {
         document.querySelector('.header-nav').classList.remove('open');
+
+        // Toggle archive section visibility
+        if (a.getAttribute('href') === '#archive-section') {
+          e.preventDefault();
+          if (archiveSection.classList.contains('hidden')) {
+            show(archiveSection);
+            archiveSection.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            hide(archiveSection);
+          }
+        } else {
+          // Hide archive when navigating to other sections
+          hide(archiveSection);
+        }
       });
     });
   }
