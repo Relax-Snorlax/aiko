@@ -72,7 +72,20 @@ function getPosts() {
 }
 
 function getTimeline() {
-  return sheetToObjects('Timeline');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Timeline');
+  var data = sheet.getDataRange().getValues();
+  if (data.length === 0) return [];
+
+  var headers = ['date', 'title', 'description'];
+  var startRow = (data[0][0] === 'date') ? 1 : 0;
+
+  return data.slice(startRow).map(function(row) {
+    var obj = {};
+    headers.forEach(function(h, i) {
+      obj[h] = row[i] instanceof Date ? row[i].toISOString() : (row[i] || '');
+    });
+    return obj;
+  });
 }
 
 function getCountdown() {
