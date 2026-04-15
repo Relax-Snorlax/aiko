@@ -664,6 +664,13 @@ select.form-input { appearance: none; cursor: pointer; }
   font-size: 11px;
   letter-spacing: 1px;
 }
+.footer-link {
+  color: #7f8c9b;
+  text-decoration: none;
+  margin-top: 4px;
+  display: inline-block;
+}
+.footer-link:hover { color: #c782af; }
 
 /* --- Animations --- */
 @keyframes shake {
