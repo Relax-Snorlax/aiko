@@ -135,6 +135,7 @@ img { max-width: 100%; height: auto; display: block; }
   transition: color 0.2s;
 }
 .header-nav a:hover { color: #c782af; }
+.header-nav a.active { color: #c782af; }
 .nav-toggle {
   display: none;
   background: none;

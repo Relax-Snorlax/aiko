@@ -495,38 +495,26 @@
   // Mobile Nav
   // ============================================
   function initNav() {
-    var hiddenSections = ['timeline-section', 'archive-section'];
-
     $('nav-toggle').addEventListener('click', function () {
       document.querySelector('.header-nav').classList.toggle('open');
     });
 
-    document.querySelectorAll('.header-nav a').forEach(function (a) {
+    document.querySelectorAll('.header-nav .nav-link').forEach(function (a) {
       a.addEventListener('click', function (e) {
+        e.preventDefault();
         document.querySelector('.header-nav').classList.remove('open');
 
-        var href = a.getAttribute('href');
-        var targetId = href ? href.replace('#', '') : '';
+        var sectionId = a.getAttribute('data-section');
+        var section = $(sectionId);
 
-        if (hiddenSections.indexOf(targetId) !== -1) {
-          e.preventDefault();
-          var section = $(targetId);
-
-          // Hide all other hidden sections first
-          hiddenSections.forEach(function (id) {
-            if (id !== targetId) hide($(id));
-          });
-
-          // Toggle the clicked section
-          if (section.classList.contains('hidden')) {
-            show(section);
-            section.scrollIntoView({ behavior: 'smooth' });
-          } else {
-            hide(section);
-          }
+        // Toggle: if visible, hide it; if hidden, show it
+        if (section.classList.contains('hidden')) {
+          show(section);
+          a.classList.add('active');
+          section.scrollIntoView({ behavior: 'smooth' });
         } else {
-          // Navigating to a visible section — hide all toggled sections
-          hiddenSections.forEach(function (id) { hide($(id)); });
+          hide(section);
+          a.classList.remove('active');
         }
       });
     });
