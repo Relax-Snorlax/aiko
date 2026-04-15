@@ -5,7 +5,7 @@
   // Configuration
   // ============================================
   var CONFIG = {
-    SCRIPT_URL: 'YOUR_APPS_SCRIPT_URL_HERE',
+    SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyh8oqcQvlror3-UMYX4Pu9aM3b6Itsj27T7xoRVduTjOG7fNUxfSh-KKilnM1wGLPO/exec',
     PASSWORD: 'DreamGirl',
     AUTH_COOKIE: 'ren-aiko-auth',
     AUTHOR_COOKIE: 'ren-aiko-author'
