@@ -495,7 +495,7 @@
   // Mobile Nav
   // ============================================
   function initNav() {
-    var archiveSection = $('archive-section');
+    var hiddenSections = ['timeline-section', 'archive-section'];
 
     $('nav-toggle').addEventListener('click', function () {
       document.querySelector('.header-nav').classList.toggle('open');
@@ -505,18 +505,28 @@
       a.addEventListener('click', function (e) {
         document.querySelector('.header-nav').classList.remove('open');
 
-        // Toggle archive section visibility
-        if (a.getAttribute('href') === '#archive-section') {
+        var href = a.getAttribute('href');
+        var targetId = href ? href.replace('#', '') : '';
+
+        if (hiddenSections.indexOf(targetId) !== -1) {
           e.preventDefault();
-          if (archiveSection.classList.contains('hidden')) {
-            show(archiveSection);
-            archiveSection.scrollIntoView({ behavior: 'smooth' });
+          var section = $(targetId);
+
+          // Hide all other hidden sections first
+          hiddenSections.forEach(function (id) {
+            if (id !== targetId) hide($(id));
+          });
+
+          // Toggle the clicked section
+          if (section.classList.contains('hidden')) {
+            show(section);
+            section.scrollIntoView({ behavior: 'smooth' });
           } else {
-            hide(archiveSection);
+            hide(section);
           }
         } else {
-          // Hide archive when navigating to other sections
-          hide(archiveSection);
+          // Navigating to a visible section — hide all toggled sections
+          hiddenSections.forEach(function (id) { hide($(id)); });
         }
       });
     });

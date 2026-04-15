@@ -78,11 +78,24 @@ function getTimeline() {
 function getCountdown() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Countdown');
   var data = sheet.getDataRange().getValues();
-  if (data.length < 2) return { label: '', target_date: '', tbd_message: 'Nothing set yet' };
-  var headers = data[0];
+  if (data.length === 0) return { label: '', target_date: '', tbd_message: 'Nothing set yet' };
+
+  // Find the data row — check if row 1 is headers or data
+  var headers = ['label', 'target_date', 'tbd_message'];
+  var dataRow;
+  if (data[0][0] === 'label') {
+    // Row 1 is headers, data is in row 2
+    dataRow = data.length >= 2 ? data[1] : null;
+  } else {
+    // No headers — row 1 is the data
+    dataRow = data[0];
+  }
+
+  if (!dataRow) return { label: '', target_date: '', tbd_message: 'Nothing set yet' };
+
   var obj = {};
   headers.forEach(function(h, i) {
-    obj[h] = data[1][i] instanceof Date ? data[1][i].toISOString() : data[1][i];
+    obj[h] = dataRow[i] instanceof Date ? dataRow[i].toISOString() : (dataRow[i] || '');
   });
   return obj;
 }
@@ -115,9 +128,27 @@ function addTimeline(params) {
 
 function updateCountdown(params) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Countdown');
-  if (sheet.getLastRow() < 2) {
+  var lastRow = sheet.getLastRow();
+
+  // Ensure headers exist in row 1
+  if (lastRow === 0) {
+    sheet.appendRow(['label', 'target_date', 'tbd_message']);
+    sheet.appendRow([params.label, params.target_date || '', params.tbd_message || '']);
+  } else if (sheet.getRange(1, 1).getValue() !== 'label') {
+    // Row 1 is data, not headers — insert headers above it
+    sheet.insertRowBefore(1);
+    sheet.getRange(1, 1).setValue('label');
+    sheet.getRange(1, 2).setValue('target_date');
+    sheet.getRange(1, 3).setValue('tbd_message');
+    // Now overwrite row 2 (the old data)
+    sheet.getRange(2, 1).setValue(params.label);
+    sheet.getRange(2, 2).setValue(params.target_date || '');
+    sheet.getRange(2, 3).setValue(params.tbd_message || '');
+  } else if (lastRow < 2) {
+    // Headers exist but no data row
     sheet.appendRow([params.label, params.target_date || '', params.tbd_message || '']);
   } else {
+    // Normal case: headers + data row exist
     sheet.getRange(2, 1).setValue(params.label);
     sheet.getRange(2, 2).setValue(params.target_date || '');
     sheet.getRange(2, 3).setValue(params.tbd_message || '');
