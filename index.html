@@ -183,6 +183,18 @@
 
       <!-- Archive posts from Google Sheet (type="archive") rendered here by JS -->
       <div id="archive-posts"></div>
+
+      <!-- Saved Chats -->
+      <div class="archive-entry">
+        <div class="section-top">
+          <h3 class="archive-heading">Saved Chats</h3>
+          <button id="new-chat-btn" class="action-btn">+ Save Chat</button>
+        </div>
+        <div id="chats-list"></div>
+        <div id="chats-loading" class="loader">Loading chats...</div>
+        <p id="chats-empty" class="empty-msg hidden">No saved chats yet.</p>
+        <p id="chats-error" class="error-msg hidden"></p>
+      </div>
     </section>
 
     <footer class="footer">
