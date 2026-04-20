@@ -678,6 +678,24 @@
     });
   }
 
+  function initLightbox() {
+    var box = $('lightbox');
+    var img = $('lightbox-img');
+
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t && t.classList && t.classList.contains('chat-img')) {
+        img.src = t.getAttribute('src');
+        show(box);
+      }
+    });
+
+    box.addEventListener('click', function () {
+      hide(box);
+      img.src = '';
+    });
+  }
+
   // ============================================
   // Archive Toggle
   // ============================================
@@ -766,6 +784,7 @@
     initPostForm();
     initTimelineForm();
     initChatForm();
+    initLightbox();
     initArchiveToggle();
 
     if (isAuthed()) {
