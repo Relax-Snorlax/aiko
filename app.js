@@ -995,6 +995,18 @@
     loadChats();
   }
 
+  function initEditDelegate() {
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('.edit-btn') : null;
+      if (!btn) return;
+      var id = btn.getAttribute('data-id');
+      var type = btn.getAttribute('data-type');
+      if (type === 'post') openEditPost(id);
+      else if (type === 'chat') openEditChat(id);
+      else if (type === 'timeline') openEditTimeline(id);
+    });
+  }
+
   // ============================================
   // Main Init
   // ============================================
@@ -1007,6 +1019,7 @@
     initTimelineForm();
     initChatForm();
     initLightbox();
+    initEditDelegate();
 
     if (isAuthed()) {
       hide($('gate'));
