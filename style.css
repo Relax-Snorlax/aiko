@@ -698,3 +698,58 @@ select.form-input { appearance: none; cursor: pointer; }
   .cd-num { font-size: 26px; }
   .cd-unit { min-width: 56px; padding: 10px 6px; }
 }
+
+/* --- Saved Chats --- */
+.chat-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #2a1f3d;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.chat-card .post-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #b8b0a8;
+  margin-bottom: 6px;
+}
+.chat-when {
+  font-style: italic;
+  font-size: 12px;
+  color: #7f8c9b;
+  margin-bottom: 12px;
+}
+.chat-images {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.chat-img {
+  width: 100%;
+  border-radius: 8px;
+  cursor: zoom-in;
+}
+.chat-text {
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid #c782af;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #e8e4df;
+  margin-bottom: 12px;
+}
+.chat-notes {
+  font-style: italic;
+  font-size: 13px;
+  color: #9a9289;
+}
+.chat-notes::before {
+  content: 'Notes: ';
+  color: #7f8c9b;
+  font-style: normal;
+}
