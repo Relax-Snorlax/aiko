@@ -320,7 +320,8 @@
   function createPostCard(p) {
     var card = document.createElement('div');
     card.className = 'post-card';
-    var html = '<div class="post-meta">' +
+    var html = '<button class="edit-btn" data-id="' + escHtml(p.id) + '" data-type="post" title="Edit">&#9998;</button>' +
+      '<div class="post-meta">' +
       '<span class="post-author">' + escHtml(p.author) + '</span>' +
       '<span class="post-date">' + formatDate(p.date) + '</span>' +
       '</div>';
@@ -410,7 +411,9 @@
     entries.forEach(function (entry, i) {
       var item = document.createElement('div');
       item.className = 'tl-item';
-      var html = '<div class="tl-marker"><div class="tl-dot"></div>' +
+      var pencil = entry.id ? '<button class="edit-btn" data-id="' + escHtml(entry.id) + '" data-type="timeline" title="Edit">&#9998;</button>' : '';
+      var html = pencil +
+        '<div class="tl-marker"><div class="tl-dot"></div>' +
         (i < entries.length - 1 ? '<div class="tl-line"></div>' : '') +
         '</div><div class="tl-content">' +
         '<div class="tl-date">' + formatDate(entry.date) + '</div>' +
@@ -496,7 +499,8 @@
     var card = document.createElement('div');
     card.className = 'chat-card';
 
-    var html = '<div class="post-meta">' +
+    var html = '<button class="edit-btn" data-id="' + escHtml(c.id) + '" data-type="chat" title="Edit">&#9998;</button>' +
+      '<div class="post-meta">' +
       '<span class="post-author">' + escHtml(c.author) + '</span>' +
       '<span class="post-date">saved ' + formatDate(c.saved_date) + '</span>' +
       '</div>';
