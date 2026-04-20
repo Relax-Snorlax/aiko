@@ -540,6 +540,8 @@
   // ============================================
   // Chats
   // ============================================
+  var lastChats = [];
+
   function loadChats() {
     apiGet('getChats')
       .then(function (chats) {
@@ -552,6 +554,7 @@
           $('chats-list').innerHTML = '';
           return;
         }
+        lastChats = chats || [];
         if (!chats || !chats.length) {
           show($('chats-empty'));
           $('chats-list').innerHTML = '';
@@ -614,10 +617,33 @@
   }
 
   var pendingImages = [];
+  var keptImageUrls = [];
+  var editingChatId = null;
 
   function renderChatThumbs() {
     var container = $('chat-thumbs');
     container.innerHTML = '';
+
+    keptImageUrls.forEach(function (url, idx) {
+      var wrap = document.createElement('div');
+      wrap.className = 'chat-thumb';
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chat-thumb-remove';
+      btn.textContent = '\u00D7';
+      btn.setAttribute('aria-label', 'Remove');
+      btn.addEventListener('click', function () {
+        keptImageUrls.splice(idx, 1);
+        renderChatThumbs();
+      });
+      wrap.appendChild(img);
+      wrap.appendChild(btn);
+      container.appendChild(wrap);
+    });
+
     pendingImages.forEach(function (file, idx) {
       var wrap = document.createElement('div');
       wrap.className = 'chat-thumb';
@@ -652,9 +678,41 @@
 
   function resetChatForm() {
     pendingImages = [];
+    keptImageUrls = [];
+    editingChatId = null;
     renderChatThumbs();
     $('chat-form').reset();
     hide($('chat-form-error'));
+    hide($('chat-delete-btn'));
+    $('chat-modal').querySelector('.modal-head h3').textContent = 'Save Chat';
+    $('chat-submit').textContent = 'Save Chat';
+  }
+
+  function openEditChat(id) {
+    var c = null;
+    for (var i = 0; i < lastChats.length; i++) {
+      if (String(lastChats[i].id) === String(id)) { c = lastChats[i]; break; }
+    }
+    if (!c) { alert('Chat not found — please refresh.'); return; }
+
+    resetChatForm();
+    $('chat-author').value = c.author || '';
+    $('chat-when').value = c.chat_when || '';
+    $('chat-text').value = c.chat_text || '';
+    $('chat-notes').value = c.notes || '';
+
+    if (c.image_urls) {
+      keptImageUrls = String(c.image_urls).split(',').map(function (u) { return u.trim(); }).filter(Boolean);
+    } else {
+      keptImageUrls = [];
+    }
+    renderChatThumbs();
+
+    editingChatId = c.id;
+    $('chat-modal').querySelector('.modal-head h3').textContent = 'Edit Chat';
+    $('chat-submit').textContent = 'Save Changes';
+    show($('chat-delete-btn'));
+    openModal('chat-modal');
   }
 
   function initChatForm() {
@@ -662,6 +720,7 @@
     var fileInput = $('chat-images');
 
     $('new-chat-btn').addEventListener('click', function () {
+      resetChatForm();
       var saved = getCookie(CONFIG.AUTHOR_COOKIE);
       if (saved) $('chat-author').value = saved;
       openModal('chat-modal');
@@ -718,7 +777,7 @@
       e.preventDefault();
       var errEl = $('chat-form-error');
       var text = $('chat-text').value.trim();
-      if (!text && pendingImages.length === 0) {
+      if (!text && pendingImages.length === 0 && keptImageUrls.length === 0) {
         errEl.textContent = 'Add chat text or at least one screenshot.';
         show(errEl);
         return;
@@ -736,23 +795,35 @@
         closeModal('chat-modal');
         resetChatForm();
         btn.disabled = false;
-        btn.textContent = 'Save Chat';
         loadChats();
       }
-
       function fail() {
         btn.disabled = false;
-        btn.textContent = 'Save Chat';
+        btn.textContent = editingChatId ? 'Save Changes' : 'Save Chat';
         alert('Failed to save chat. Please try again.');
       }
 
-      var payload = {
-        action: 'addChat',
-        author: author,
-        chat_text: text,
-        chat_when: $('chat-when').value,
-        notes: $('chat-notes').value
-      };
+      var payload;
+      if (editingChatId) {
+        payload = {
+          action: 'editEntry',
+          sheet: 'Chats',
+          id: editingChatId,
+          author: author,
+          chat_text: text,
+          chat_when: $('chat-when').value,
+          notes: $('chat-notes').value,
+          image_urls: keptImageUrls.join(',')
+        };
+      } else {
+        payload = {
+          action: 'addChat',
+          author: author,
+          chat_text: text,
+          chat_when: $('chat-when').value,
+          notes: $('chat-notes').value
+        };
+      }
 
       if (pendingImages.length === 0) {
         apiPost(payload).then(done).catch(fail);
@@ -769,6 +840,14 @@
         payload.images = JSON.stringify(images);
         return apiPost(payload);
       }).then(done).catch(fail);
+    });
+
+    $('chat-delete-btn').addEventListener('click', function () {
+      if (!editingChatId) return;
+      if (!confirm('Delete this chat permanently?')) return;
+      apiPost({ action: 'deleteEntry', sheet: 'Chats', id: editingChatId })
+        .then(function () { closeModal('chat-modal'); resetChatForm(); loadChats(); })
+        .catch(function () { alert('Failed to delete. Please try again.'); });
     });
   }
 
