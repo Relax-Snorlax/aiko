@@ -31,6 +31,7 @@ function doPost(e) {
       case 'addPost':          result = addPost(e.parameter); break;
       case 'addTimeline':      result = addTimeline(e.parameter); break;
       case 'updateCountdown':  result = updateCountdown(e.parameter); break;
+      case 'addChat':          result = addChat(e.parameter); break;
       default:                 result = { error: 'Unknown action: ' + action };
     }
   } catch (err) {
@@ -172,6 +173,51 @@ function updateCountdown(params) {
     sheet.getRange(2, 3).setValue(params.tbd_message || '');
   }
   return { success: true };
+}
+
+function addChat(params) {
+  var author = params.author || '';
+  var chatText = params.chat_text || '';
+  var chatWhen = params.chat_when || '';
+  var notes = params.notes || '';
+
+  if (!author) {
+    return { error: 'Author is required' };
+  }
+
+  var id = Utilities.getUuid();
+  var imageUrls = '';
+
+  if (params.images && params.images.length > 0) {
+    var images;
+    try {
+      images = JSON.parse(params.images);
+    } catch (e) {
+      return { error: 'Invalid images payload' };
+    }
+    if (!Array.isArray(images)) images = [];
+    var urls = [];
+    for (var i = 0; i < images.length; i++) {
+      var img = images[i];
+      if (!img || !img.data) continue;
+      var mime = img.type || 'image/jpeg';
+      urls.push(uploadImage(img.data, mime, id + '-' + i));
+    }
+    imageUrls = urls.join(',');
+  }
+
+  if (!chatText && !imageUrls) {
+    return { error: 'Provide chat text or at least one screenshot' };
+  }
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chats');
+  if (!sheet) {
+    return { error: 'Chats tab not found in sheet' };
+  }
+
+  var savedDate = new Date().toISOString();
+  sheet.appendRow([id, savedDate, author, chatText, imageUrls, chatWhen, notes]);
+  return { success: true, id: id, saved_date: savedDate, image_urls: imageUrls };
 }
 
 // --- Image Upload ---
