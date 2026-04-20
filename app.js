@@ -707,24 +707,6 @@
   }
 
   // ============================================
-  // Archive Toggle
-  // ============================================
-  function initArchiveToggle() {
-    var btns = document.querySelectorAll('.archive-toggle .toggle-btn');
-    btns.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        btns.forEach(function (b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        document.querySelectorAll('.archive-view').forEach(function (v) {
-          v.classList.remove('active');
-        });
-        var target = $(btn.getAttribute('data-show'));
-        if (target) target.classList.add('active');
-      });
-    });
-  }
-
-  // ============================================
   // Modals
   // ============================================
   function openModal(id) { show($(id)); }
@@ -795,7 +777,6 @@
     initTimelineForm();
     initChatForm();
     initLightbox();
-    initArchiveToggle();
 
     if (isAuthed()) {
       hide($('gate'));
