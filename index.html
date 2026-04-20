@@ -283,6 +283,40 @@
     </div>
   </div>
 
+  <!-- Chat Modal -->
+  <div id="chat-modal" class="modal hidden">
+    <div class="modal-bg"></div>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Save Chat</h3>
+        <button class="modal-x" data-close="chat-modal">&times;</button>
+      </div>
+      <form id="chat-form">
+        <label class="form-label">Author
+          <input type="text" id="chat-author" class="form-input" required>
+        </label>
+        <label class="form-label">When did the chat take place? <span class="optional">(optional)</span>
+          <input type="text" id="chat-when" class="form-input"
+                 placeholder="e.g. Apr 15, 2026 8:30 PM or Spring 2025">
+        </label>
+        <label class="form-label">Screenshots <span class="optional">(click, paste, or drop)</span></label>
+        <div id="chat-dropzone" class="chat-dropzone" tabindex="0">
+          <p class="chat-dropzone-hint">Click to choose &middot; Ctrl/Cmd+V to paste &middot; or drag &amp; drop</p>
+          <input type="file" id="chat-images" accept="image/*" multiple hidden>
+          <div id="chat-thumbs" class="chat-thumbs"></div>
+        </div>
+        <label class="form-label">Chat text <span class="optional">(paste transcript)</span>
+          <textarea id="chat-text" class="form-input form-textarea" rows="5"></textarea>
+        </label>
+        <label class="form-label">Notes <span class="optional">(optional)</span>
+          <textarea id="chat-notes" class="form-input form-textarea" rows="2"></textarea>
+        </label>
+        <p id="chat-form-error" class="error-msg hidden"></p>
+        <button type="submit" class="form-submit" id="chat-submit">Save Chat</button>
+      </form>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
