@@ -91,6 +91,8 @@ function getTimeline() {
 }
 
 function getChats() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chats');
+  if (!sheet) return { error: 'Chats tab not found in sheet' };
   return sheetToObjects('Chats');
 }
 
@@ -185,6 +187,11 @@ function addChat(params) {
     return { error: 'Author is required' };
   }
 
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chats');
+  if (!sheet) {
+    return { error: 'Chats tab not found in sheet' };
+  }
+
   var id = Utilities.getUuid();
   var imageUrls = '';
 
@@ -208,11 +215,6 @@ function addChat(params) {
 
   if (!chatText && !imageUrls) {
     return { error: 'Provide chat text or at least one screenshot' };
-  }
-
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Chats');
-  if (!sheet) {
-    return { error: 'Chats tab not found in sheet' };
   }
 
   var savedDate = new Date().toISOString();
