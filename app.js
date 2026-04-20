@@ -123,7 +123,8 @@
       document.body.appendChild(form);
 
       var resolved = false;
-      var hasImage = payload.image && payload.image.length > 0;
+      var hasImage = (payload.image && payload.image.length > 0) ||
+               (payload.images && payload.images.length > 0);
       var timeoutMs = hasImage ? 30000 : 10000;
 
       function cleanup() {
@@ -498,9 +499,10 @@
 
     if (c.image_urls) {
       var urls = String(c.image_urls).split(',').map(function (u) { return u.trim(); }).filter(Boolean);
-      if (urls.length) {
+      var safeUrls = urls.filter(function (u) { return u.indexOf('https://') === 0; });
+      if (safeUrls.length) {
         html += '<div class="chat-images">';
-        urls.forEach(function (u) {
+        safeUrls.forEach(function (u) {
           html += '<img class="chat-img" src="' + escHtml(u) + '" alt="Chat screenshot" loading="lazy">';
         });
         html += '</div>';
