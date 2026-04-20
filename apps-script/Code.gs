@@ -15,6 +15,7 @@ function doGet(e) {
       case 'getPosts':      return respond(getPosts());
       case 'getTimeline':   return respond(getTimeline());
       case 'getCountdown':  return respond(getCountdown());
+      case 'getChats':      return respond(getChats());
       default:              return respond({ error: 'Unknown action: ' + action });
     }
   } catch (err) {
@@ -86,6 +87,10 @@ function getTimeline() {
     });
     return obj;
   });
+}
+
+function getChats() {
+  return sheetToObjects('Chats');
 }
 
 function getCountdown() {
