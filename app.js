@@ -270,9 +270,12 @@
   // ============================================
   // Posts
   // ============================================
+  var lastPosts = [];
+
   function loadPosts() {
     apiGet('getPosts')
       .then(function (posts) {
+        lastPosts = posts || [];
         hide($('posts-loading'));
         var regular = [];
         var archived = [];
@@ -336,49 +339,126 @@
     return card;
   }
 
+  var editingPostId = null;
+  var postImageRemoved = false;
+
+  function resetPostForm() {
+    editingPostId = null;
+    postImageRemoved = false;
+    $('post-form').reset();
+    hide($('post-current-image'));
+    hide($('post-delete-btn'));
+    $('post-modal').querySelector('.modal-head h3').textContent = 'New Post';
+    $('post-submit').textContent = 'Post';
+  }
+
+  function openEditPost(id) {
+    var p = null;
+    for (var i = 0; i < lastPosts.length; i++) {
+      if (String(lastPosts[i].id) === String(id)) { p = lastPosts[i]; break; }
+    }
+    if (!p) { alert('Post not found — please refresh.'); return; }
+
+    $('post-author').value = p.author || '';
+    $('post-title').value = p.title || '';
+    $('post-body').value = p.body || '';
+    $('post-type').value = p.type || 'post';
+
+    if (p.image_url) {
+      $('post-current-image-img').src = p.image_url;
+      show($('post-current-image'));
+      postImageRemoved = false;
+    } else {
+      hide($('post-current-image'));
+    }
+
+    editingPostId = p.id;
+    $('post-modal').querySelector('.modal-head h3').textContent = 'Edit Post';
+    $('post-submit').textContent = 'Save Changes';
+    show($('post-delete-btn'));
+    openModal('post-modal');
+  }
+
   function initPostForm() {
     $('new-post-btn').addEventListener('click', function () {
+      resetPostForm();
       var saved = getCookie(CONFIG.AUTHOR_COOKIE);
       if (saved) $('post-author').value = saved;
       openModal('post-modal');
+    });
+
+    $('post-remove-img-btn').addEventListener('click', function () {
+      hide($('post-current-image'));
+      postImageRemoved = true;
+    });
+
+    $('post-delete-btn').addEventListener('click', function () {
+      if (!editingPostId) return;
+      if (!confirm('Delete this post permanently?')) return;
+      apiPost({ action: 'deleteEntry', sheet: 'Posts', id: editingPostId })
+        .then(function () { closeModal('post-modal'); resetPostForm(); loadPosts(); })
+        .catch(function () { alert('Failed to delete. Please try again.'); });
     });
 
     $('post-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var btn = $('post-submit');
       btn.disabled = true;
-      btn.textContent = 'Posting...';
+      btn.textContent = editingPostId ? 'Saving...' : 'Posting...';
 
       var file = $('post-image').files[0];
-      var payload = {
-        action: 'addPost',
-        author: $('post-author').value,
-        title: $('post-title').value,
-        body: $('post-body').value,
-        type: $('post-type').value
-      };
+      var author = $('post-author').value;
+      setCookie(CONFIG.AUTHOR_COOKIE, author, 365);
 
-      setCookie(CONFIG.AUTHOR_COOKIE, payload.author, 365);
-
-      var chain = file
-        ? readFileAsBase64(file).then(function (b64) {
-            payload.image = b64;
-            payload.image_type = file.type;
-            return apiPost(payload);
-          })
-        : apiPost(payload);
-
-      chain.then(function () {
+      function done() {
         closeModal('post-modal');
-        $('post-form').reset();
+        resetPostForm();
         btn.disabled = false;
-        btn.textContent = 'Post';
         loadPosts();
-      }).catch(function () {
+      }
+      function fail() {
         btn.disabled = false;
-        btn.textContent = 'Post';
-        alert('Failed to create post. Please try again.');
-      });
+        btn.textContent = editingPostId ? 'Save Changes' : 'Post';
+        alert('Failed to save. Please try again.');
+      }
+
+      var payload;
+      if (editingPostId) {
+        payload = {
+          action: 'editEntry',
+          sheet: 'Posts',
+          id: editingPostId,
+          author: author,
+          title: $('post-title').value,
+          body: $('post-body').value,
+          type: $('post-type').value
+        };
+        if (postImageRemoved && !file) payload.image_url = '';
+        var chain = file
+          ? readFileAsBase64(file).then(function (b64) {
+              payload.image = b64;
+              payload.image_type = file.type;
+              return apiPost(payload);
+            })
+          : apiPost(payload);
+        chain.then(done).catch(fail);
+      } else {
+        payload = {
+          action: 'addPost',
+          author: author,
+          title: $('post-title').value,
+          body: $('post-body').value,
+          type: $('post-type').value
+        };
+        var chain2 = file
+          ? readFileAsBase64(file).then(function (b64) {
+              payload.image = b64;
+              payload.image_type = file.type;
+              return apiPost(payload);
+            })
+          : apiPost(payload);
+        chain2.then(done).catch(fail);
+      }
     });
   }
 
@@ -719,15 +799,25 @@
   function initModals() {
     document.querySelectorAll('.modal-x').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        closeModal(btn.getAttribute('data-close'));
+        var id = btn.getAttribute('data-close');
+        closeModal(id);
+        resetFormForModal(id);
       });
     });
     document.querySelectorAll('.modal-bg').forEach(function (bg) {
       bg.addEventListener('click', function () {
         var modal = bg.closest('.modal');
-        if (modal) hide(modal);
+        if (!modal) return;
+        hide(modal);
+        resetFormForModal(modal.id);
       });
     });
+  }
+
+  function resetFormForModal(id) {
+    if (id === 'post-modal' && typeof resetPostForm === 'function') resetPostForm();
+    else if (id === 'chat-modal' && typeof resetChatForm === 'function') resetChatForm();
+    else if (id === 'timeline-modal' && typeof resetTimelineForm === 'function') resetTimelineForm();
   }
 
   // ============================================
