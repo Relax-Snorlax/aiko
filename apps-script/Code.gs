@@ -6,6 +6,12 @@
 // Replace with your Google Drive folder ID for image uploads
 var DRIVE_FOLDER_ID = 'YOUR_FOLDER_ID_HERE';
 
+var EDITABLE_SHEETS = {
+  'Posts':    ['author', 'title', 'body', 'image_url', 'type'],
+  'Chats':    ['author', 'chat_text', 'image_urls', 'chat_when', 'notes'],
+  'Timeline': ['date', 'title', 'description']
+};
+
 // --- Entry Points ---
 
 function doGet(e) {
@@ -32,6 +38,8 @@ function doPost(e) {
       case 'addTimeline':      result = addTimeline(e.parameter); break;
       case 'updateCountdown':  result = updateCountdown(e.parameter); break;
       case 'addChat':          result = addChat(e.parameter); break;
+      case 'editEntry':        result = editEntry(e.parameter); break;
+      case 'deleteEntry':      result = deleteEntry(e.parameter); break;
       default:                 result = { error: 'Unknown action: ' + action };
     }
   } catch (err) {
@@ -78,8 +86,8 @@ function getTimeline() {
   var data = sheet.getDataRange().getValues();
   if (data.length === 0) return [];
 
-  var headers = ['date', 'title', 'description'];
-  var startRow = (data[0][0] === 'date') ? 1 : 0;
+  var headers = ['id', 'date', 'title', 'description'];
+  var startRow = (data[0][0] === 'id') ? 1 : 0;
 
   return data.slice(startRow).map(function(row) {
     var obj = {};
@@ -88,6 +96,22 @@ function getTimeline() {
     });
     return obj;
   });
+}
+
+function backfillTimelineIds() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Timeline');
+  if (!sheet) return { error: 'Timeline tab not found' };
+  var data = sheet.getDataRange().getValues();
+  if (data.length === 0) return { filled: 0 };
+  var startRow = (data[0][0] === 'id') ? 1 : 0;
+  var filled = 0;
+  for (var r = startRow; r < data.length; r++) {
+    if (!data[r][0]) {
+      sheet.getRange(r + 1, 1).setValue(Utilities.getUuid());
+      filled++;
+    }
+  }
+  return { filled: filled };
 }
 
 function getChats() {
@@ -143,8 +167,9 @@ function addPost(params) {
 
 function addTimeline(params) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Timeline');
-  sheet.appendRow([params.date, params.title, params.description || '']);
-  return { success: true };
+  var id = Utilities.getUuid();
+  sheet.appendRow([id, params.date, params.title, params.description || '']);
+  return { success: true, id: id };
 }
 
 function updateCountdown(params) {
@@ -220,6 +245,88 @@ function addChat(params) {
   var savedDate = new Date().toISOString();
   sheet.appendRow([id, savedDate, author, chatText, imageUrls, chatWhen, notes]);
   return { success: true, id: id, saved_date: savedDate, image_urls: imageUrls };
+}
+
+function editEntry(params) {
+  var sheetName = params.sheet;
+  var id = params.id;
+  var allowed = EDITABLE_SHEETS[sheetName];
+  if (!allowed) return { error: 'Unknown sheet: ' + sheetName };
+  if (!id) return { error: 'Missing id' };
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return { error: sheetName + ' tab not found' };
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idCol = headers.indexOf('id');
+  if (idCol < 0) return { error: sheetName + ' sheet missing id column' };
+
+  var rowIndex = -1;
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][idCol]) === String(id)) { rowIndex = r; break; }
+  }
+  if (rowIndex < 0) return { error: 'Entry not found' };
+
+  // Fresh image uploads (Posts single, Chats multi).
+  var newImageUrls = null;
+  if (sheetName === 'Posts' && params.image && params.image.length > 0) {
+    var mime = params.image_type || 'image/jpeg';
+    newImageUrls = uploadImage(params.image, mime, id + '-edit-' + Date.now());
+  }
+  if (sheetName === 'Chats' && params.images && params.images.length > 0) {
+    var images;
+    try { images = JSON.parse(params.images); } catch (e) { return { error: 'Invalid images payload' }; }
+    var urls = [];
+    for (var i = 0; i < images.length; i++) {
+      var img = images[i];
+      if (!img || !img.data) continue;
+      var mime2 = img.type || 'image/jpeg';
+      urls.push(uploadImage(img.data, mime2, id + '-edit-' + Date.now() + '-' + i));
+    }
+    var kept = params.image_urls ? String(params.image_urls).split(',').filter(Boolean) : [];
+    newImageUrls = kept.concat(urls).join(',');
+  }
+
+  // Apply allowlist edits (only fields the client explicitly sent).
+  allowed.forEach(function (field) {
+    if (params[field] === undefined) return;
+    var colIndex = headers.indexOf(field);
+    if (colIndex < 0) return;
+    sheet.getRange(rowIndex + 1, colIndex + 1).setValue(params[field]);
+  });
+
+  // Apply computed image URL AFTER allowlist so fresh uploads win.
+  if (newImageUrls !== null) {
+    var imgField = (sheetName === 'Posts') ? 'image_url' : 'image_urls';
+    var imgCol = headers.indexOf(imgField);
+    if (imgCol >= 0) sheet.getRange(rowIndex + 1, imgCol + 1).setValue(newImageUrls);
+  }
+
+  return { success: true, id: id };
+}
+
+function deleteEntry(params) {
+  var sheetName = params.sheet;
+  var id = params.id;
+  if (!EDITABLE_SHEETS[sheetName]) return { error: 'Unknown sheet: ' + sheetName };
+  if (!id) return { error: 'Missing id' };
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return { error: sheetName + ' tab not found' };
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idCol = headers.indexOf('id');
+  if (idCol < 0) return { error: sheetName + ' sheet missing id column' };
+
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][idCol]) === String(id)) {
+      sheet.deleteRow(r + 1);
+      return { success: true };
+    }
+  }
+  return { error: 'Entry not found' };
 }
 
 // --- Image Upload ---

@@ -17,9 +17,9 @@ Create four tabs with these exact column headers in row 1:
 
 **Tab: Timeline**
 
-| A    | B     | C           |
-|------|-------|-------------|
-| date | title | description |
+| A  | B    | C     | D           |
+|----|------|-------|-------------|
+| id | date | title | description |
 
 **Tab: Countdown**
 
@@ -81,3 +81,11 @@ If you edit Code.gs later:
 4. Click **Deploy**
 
 **Note:** After editing `Code.gs` you MUST redeploy (new version) for the changes to take effect. The existing deployment URL is reused across redeploys, so no frontend config change is needed.
+
+## One-Time Migration for Edit/Delete on Timeline
+
+If you're upgrading from the earlier 3-column Timeline:
+
+1. Insert a new column to the left of column A in the Timeline tab. The first row becomes `id | date | title | description`.
+2. In the Apps Script editor, select `backfillTimelineIds` from the function dropdown and click Run. It assigns a UUID to every existing row that lacks one.
+3. You only need to run this once. New rows created via the site will include an id automatically.

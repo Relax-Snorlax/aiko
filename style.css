@@ -937,3 +937,63 @@ select.form-input { appearance: none; cursor: pointer; }
   color: #7f8c9b;
   font-size: 13px;
 }
+
+/* --- Edit/Delete --- */
+.post-card, .chat-card, .tl-item { position: relative; }
+
+.edit-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #7f8c9b;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.edit-btn:hover {
+  color: #c782af;
+  background: rgba(199, 130, 175, 0.08);
+}
+
+.form-delete {
+  background: transparent;
+  color: #e85d75;
+  border: 1px solid #e85d75;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+.form-delete:hover {
+  background: #e85d75;
+  color: #0a0a0f;
+}
+
+.post-current-image {
+  margin-bottom: 12px;
+}
+.post-current-image img {
+  max-width: 100%;
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+.post-remove-img {
+  background: transparent;
+  color: #e85d75;
+  border: 1px solid #2a1f3d;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.post-remove-img:hover {
+  border-color: #e85d75;
+}
+

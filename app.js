@@ -270,9 +270,12 @@
   // ============================================
   // Posts
   // ============================================
+  var lastPosts = [];
+
   function loadPosts() {
     apiGet('getPosts')
       .then(function (posts) {
+        lastPosts = posts || [];
         hide($('posts-loading'));
         var regular = [];
         var archived = [];
@@ -320,7 +323,8 @@
   function createPostCard(p) {
     var card = document.createElement('div');
     card.className = 'post-card';
-    var html = '<div class="post-meta">' +
+    var html = '<button class="edit-btn" data-id="' + escHtml(p.id) + '" data-type="post" title="Edit">&#9998;</button>' +
+      '<div class="post-meta">' +
       '<span class="post-author">' + escHtml(p.author) + '</span>' +
       '<span class="post-date">' + formatDate(p.date) + '</span>' +
       '</div>';
@@ -335,58 +339,139 @@
     return card;
   }
 
+  var editingPostId = null;
+  var postImageRemoved = false;
+
+  function resetPostForm() {
+    editingPostId = null;
+    postImageRemoved = false;
+    $('post-form').reset();
+    hide($('post-current-image'));
+    hide($('post-delete-btn'));
+    $('post-modal').querySelector('.modal-head h3').textContent = 'New Post';
+    $('post-submit').textContent = 'Post';
+  }
+
+  function openEditPost(id) {
+    var p = null;
+    for (var i = 0; i < lastPosts.length; i++) {
+      if (String(lastPosts[i].id) === String(id)) { p = lastPosts[i]; break; }
+    }
+    if (!p) { alert('Post not found — please refresh.'); return; }
+
+    resetPostForm();
+    $('post-author').value = p.author || '';
+    $('post-title').value = p.title || '';
+    $('post-body').value = p.body || '';
+    $('post-type').value = p.type || 'post';
+
+    if (p.image_url) {
+      $('post-current-image-img').src = p.image_url;
+      show($('post-current-image'));
+      postImageRemoved = false;
+    } else {
+      hide($('post-current-image'));
+    }
+
+    editingPostId = p.id;
+    $('post-modal').querySelector('.modal-head h3').textContent = 'Edit Post';
+    $('post-submit').textContent = 'Save Changes';
+    show($('post-delete-btn'));
+    openModal('post-modal');
+  }
+
   function initPostForm() {
     $('new-post-btn').addEventListener('click', function () {
+      resetPostForm();
       var saved = getCookie(CONFIG.AUTHOR_COOKIE);
       if (saved) $('post-author').value = saved;
       openModal('post-modal');
+    });
+
+    $('post-remove-img-btn').addEventListener('click', function () {
+      hide($('post-current-image'));
+      postImageRemoved = true;
+    });
+
+    $('post-delete-btn').addEventListener('click', function () {
+      if (!editingPostId) return;
+      if (!confirm('Delete this post permanently?')) return;
+      apiPost({ action: 'deleteEntry', sheet: 'Posts', id: editingPostId })
+        .then(function () { closeModal('post-modal'); resetPostForm(); loadPosts(); })
+        .catch(function () { alert('Failed to delete. Please try again.'); });
     });
 
     $('post-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var btn = $('post-submit');
       btn.disabled = true;
-      btn.textContent = 'Posting...';
+      btn.textContent = editingPostId ? 'Saving...' : 'Posting...';
 
       var file = $('post-image').files[0];
-      var payload = {
-        action: 'addPost',
-        author: $('post-author').value,
-        title: $('post-title').value,
-        body: $('post-body').value,
-        type: $('post-type').value
-      };
+      var author = $('post-author').value;
+      setCookie(CONFIG.AUTHOR_COOKIE, author, 365);
 
-      setCookie(CONFIG.AUTHOR_COOKIE, payload.author, 365);
-
-      var chain = file
-        ? readFileAsBase64(file).then(function (b64) {
-            payload.image = b64;
-            payload.image_type = file.type;
-            return apiPost(payload);
-          })
-        : apiPost(payload);
-
-      chain.then(function () {
+      function done() {
         closeModal('post-modal');
-        $('post-form').reset();
+        resetPostForm();
         btn.disabled = false;
-        btn.textContent = 'Post';
         loadPosts();
-      }).catch(function () {
+      }
+      function fail() {
         btn.disabled = false;
-        btn.textContent = 'Post';
-        alert('Failed to create post. Please try again.');
-      });
+        btn.textContent = editingPostId ? 'Save Changes' : 'Post';
+        alert('Failed to save. Please try again.');
+      }
+
+      var payload;
+      if (editingPostId) {
+        payload = {
+          action: 'editEntry',
+          sheet: 'Posts',
+          id: editingPostId,
+          author: author,
+          title: $('post-title').value,
+          body: $('post-body').value,
+          type: $('post-type').value
+        };
+        if (postImageRemoved && !file) payload.image_url = '';
+        var chain = file
+          ? readFileAsBase64(file).then(function (b64) {
+              payload.image = b64;
+              payload.image_type = file.type;
+              return apiPost(payload);
+            })
+          : apiPost(payload);
+        chain.then(done).catch(fail);
+      } else {
+        payload = {
+          action: 'addPost',
+          author: author,
+          title: $('post-title').value,
+          body: $('post-body').value,
+          type: $('post-type').value
+        };
+        var chain2 = file
+          ? readFileAsBase64(file).then(function (b64) {
+              payload.image = b64;
+              payload.image_type = file.type;
+              return apiPost(payload);
+            })
+          : apiPost(payload);
+        chain2.then(done).catch(fail);
+      }
     });
   }
 
   // ============================================
   // Timeline
   // ============================================
+  var lastTimeline = [];
+
   function loadTimeline() {
     apiGet('getTimeline')
       .then(function (entries) {
+        lastTimeline = entries || [];
         hide($('timeline-loading'));
         if (!entries.length) {
           show($('timeline-empty'));
@@ -410,7 +495,9 @@
     entries.forEach(function (entry, i) {
       var item = document.createElement('div');
       item.className = 'tl-item';
-      var html = '<div class="tl-marker"><div class="tl-dot"></div>' +
+      var pencil = entry.id ? '<button class="edit-btn" data-id="' + escHtml(entry.id) + '" data-type="timeline" title="Edit">&#9998;</button>' : '';
+      var html = pencil +
+        '<div class="tl-marker"><div class="tl-dot"></div>' +
         (i < entries.length - 1 ? '<div class="tl-line"></div>' : '') +
         '</div><div class="tl-content">' +
         '<div class="tl-date">' + formatDate(entry.date) + '</div>' +
@@ -424,9 +511,48 @@
     });
   }
 
+  var editingTimelineId = null;
+
+  function resetTimelineForm() {
+    editingTimelineId = null;
+    $('timeline-form').reset();
+    hide($('tl-delete-btn'));
+    $('timeline-modal').querySelector('.modal-head h3').textContent = 'Add Milestone';
+    $('tl-submit').textContent = 'Add Milestone';
+  }
+
+  function openEditTimeline(id) {
+    var entry = null;
+    for (var i = 0; i < lastTimeline.length; i++) {
+      if (String(lastTimeline[i].id) === String(id)) { entry = lastTimeline[i]; break; }
+    }
+    if (!entry) { alert('Milestone not found — please refresh.'); return; }
+
+    resetTimelineForm();
+    var dateStr = entry.date ? String(entry.date).slice(0, 10) : '';
+    $('tl-date').value = dateStr;
+    $('tl-title').value = entry.title || '';
+    $('tl-desc').value = entry.description || '';
+
+    editingTimelineId = entry.id;
+    $('timeline-modal').querySelector('.modal-head h3').textContent = 'Edit Milestone';
+    $('tl-submit').textContent = 'Save Changes';
+    show($('tl-delete-btn'));
+    openModal('timeline-modal');
+  }
+
   function initTimelineForm() {
     $('new-tl-btn').addEventListener('click', function () {
+      resetTimelineForm();
       openModal('timeline-modal');
+    });
+
+    $('tl-delete-btn').addEventListener('click', function () {
+      if (!editingTimelineId) return;
+      if (!confirm('Delete this milestone permanently?')) return;
+      apiPost({ action: 'deleteEntry', sheet: 'Timeline', id: editingTimelineId })
+        .then(function () { closeModal('timeline-modal'); resetTimelineForm(); loadTimeline(); })
+        .catch(function () { alert('Failed to delete. Please try again.'); });
     });
 
     $('timeline-form').addEventListener('submit', function (e) {
@@ -435,28 +561,45 @@
       btn.disabled = true;
       btn.textContent = 'Saving...';
 
-      apiPost({
-        action: 'addTimeline',
-        date: $('tl-date').value,
-        title: $('tl-title').value,
-        description: $('tl-desc').value
-      }).then(function () {
+      function done() {
         closeModal('timeline-modal');
-        $('timeline-form').reset();
+        resetTimelineForm();
         btn.disabled = false;
-        btn.textContent = 'Add Milestone';
         loadTimeline();
-      }).catch(function () {
+      }
+      function fail() {
         btn.disabled = false;
-        btn.textContent = 'Add Milestone';
-        alert('Failed to add milestone. Please try again.');
-      });
+        btn.textContent = editingTimelineId ? 'Save Changes' : 'Add Milestone';
+        alert('Failed to save. Please try again.');
+      }
+
+      var payload;
+      if (editingTimelineId) {
+        payload = {
+          action: 'editEntry',
+          sheet: 'Timeline',
+          id: editingTimelineId,
+          date: $('tl-date').value,
+          title: $('tl-title').value,
+          description: $('tl-desc').value
+        };
+      } else {
+        payload = {
+          action: 'addTimeline',
+          date: $('tl-date').value,
+          title: $('tl-title').value,
+          description: $('tl-desc').value
+        };
+      }
+      apiPost(payload).then(done).catch(fail);
     });
   }
 
   // ============================================
   // Chats
   // ============================================
+  var lastChats = [];
+
   function loadChats() {
     apiGet('getChats')
       .then(function (chats) {
@@ -469,6 +612,7 @@
           $('chats-list').innerHTML = '';
           return;
         }
+        lastChats = chats || [];
         if (!chats || !chats.length) {
           show($('chats-empty'));
           $('chats-list').innerHTML = '';
@@ -496,7 +640,8 @@
     var card = document.createElement('div');
     card.className = 'chat-card';
 
-    var html = '<div class="post-meta">' +
+    var html = '<button class="edit-btn" data-id="' + escHtml(c.id) + '" data-type="chat" title="Edit">&#9998;</button>' +
+      '<div class="post-meta">' +
       '<span class="post-author">' + escHtml(c.author) + '</span>' +
       '<span class="post-date">saved ' + formatDate(c.saved_date) + '</span>' +
       '</div>';
@@ -530,11 +675,35 @@
   }
 
   var pendingImages = [];
+  var keptImageUrls = [];
+  var editingChatId = null;
 
   function renderChatThumbs() {
     var container = $('chat-thumbs');
     container.innerHTML = '';
-    pendingImages.forEach(function (file, idx) {
+
+    keptImageUrls.forEach(function (url) {
+      var wrap = document.createElement('div');
+      wrap.className = 'chat-thumb';
+      var img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chat-thumb-remove';
+      btn.textContent = '\u00D7';
+      btn.setAttribute('aria-label', 'Remove');
+      btn.addEventListener('click', function () {
+        var i = keptImageUrls.indexOf(url);
+        if (i !== -1) keptImageUrls.splice(i, 1);
+        renderChatThumbs();
+      });
+      wrap.appendChild(img);
+      wrap.appendChild(btn);
+      container.appendChild(wrap);
+    });
+
+    pendingImages.forEach(function (file) {
       var wrap = document.createElement('div');
       wrap.className = 'chat-thumb';
       var img = document.createElement('img');
@@ -546,7 +715,8 @@
       btn.textContent = '\u00D7';
       btn.setAttribute('aria-label', 'Remove');
       btn.addEventListener('click', function () {
-        pendingImages.splice(idx, 1);
+        var i = pendingImages.indexOf(file);
+        if (i !== -1) pendingImages.splice(i, 1);
         renderChatThumbs();
       });
       wrap.appendChild(img);
@@ -568,9 +738,41 @@
 
   function resetChatForm() {
     pendingImages = [];
+    keptImageUrls = [];
+    editingChatId = null;
     renderChatThumbs();
     $('chat-form').reset();
     hide($('chat-form-error'));
+    hide($('chat-delete-btn'));
+    $('chat-modal').querySelector('.modal-head h3').textContent = 'Save Chat';
+    $('chat-submit').textContent = 'Save Chat';
+  }
+
+  function openEditChat(id) {
+    var c = null;
+    for (var i = 0; i < lastChats.length; i++) {
+      if (String(lastChats[i].id) === String(id)) { c = lastChats[i]; break; }
+    }
+    if (!c) { alert('Chat not found — please refresh.'); return; }
+
+    resetChatForm();
+    $('chat-author').value = c.author || '';
+    $('chat-when').value = c.chat_when || '';
+    $('chat-text').value = c.chat_text || '';
+    $('chat-notes').value = c.notes || '';
+
+    if (c.image_urls) {
+      keptImageUrls = String(c.image_urls).split(',').map(function (u) { return u.trim(); }).filter(Boolean);
+    } else {
+      keptImageUrls = [];
+    }
+    renderChatThumbs();
+
+    editingChatId = c.id;
+    $('chat-modal').querySelector('.modal-head h3').textContent = 'Edit Chat';
+    $('chat-submit').textContent = 'Save Changes';
+    show($('chat-delete-btn'));
+    openModal('chat-modal');
   }
 
   function initChatForm() {
@@ -578,6 +780,7 @@
     var fileInput = $('chat-images');
 
     $('new-chat-btn').addEventListener('click', function () {
+      resetChatForm();
       var saved = getCookie(CONFIG.AUTHOR_COOKIE);
       if (saved) $('chat-author').value = saved;
       openModal('chat-modal');
@@ -634,7 +837,7 @@
       e.preventDefault();
       var errEl = $('chat-form-error');
       var text = $('chat-text').value.trim();
-      if (!text && pendingImages.length === 0) {
+      if (!text && pendingImages.length === 0 && keptImageUrls.length === 0) {
         errEl.textContent = 'Add chat text or at least one screenshot.';
         show(errEl);
         return;
@@ -652,23 +855,35 @@
         closeModal('chat-modal');
         resetChatForm();
         btn.disabled = false;
-        btn.textContent = 'Save Chat';
         loadChats();
       }
-
       function fail() {
         btn.disabled = false;
-        btn.textContent = 'Save Chat';
+        btn.textContent = editingChatId ? 'Save Changes' : 'Save Chat';
         alert('Failed to save chat. Please try again.');
       }
 
-      var payload = {
-        action: 'addChat',
-        author: author,
-        chat_text: text,
-        chat_when: $('chat-when').value,
-        notes: $('chat-notes').value
-      };
+      var payload;
+      if (editingChatId) {
+        payload = {
+          action: 'editEntry',
+          sheet: 'Chats',
+          id: editingChatId,
+          author: author,
+          chat_text: text,
+          chat_when: $('chat-when').value,
+          notes: $('chat-notes').value,
+          image_urls: keptImageUrls.join(',')
+        };
+      } else {
+        payload = {
+          action: 'addChat',
+          author: author,
+          chat_text: text,
+          chat_when: $('chat-when').value,
+          notes: $('chat-notes').value
+        };
+      }
 
       if (pendingImages.length === 0) {
         apiPost(payload).then(done).catch(fail);
@@ -685,6 +900,14 @@
         payload.images = JSON.stringify(images);
         return apiPost(payload);
       }).then(done).catch(fail);
+    });
+
+    $('chat-delete-btn').addEventListener('click', function () {
+      if (!editingChatId) return;
+      if (!confirm('Delete this chat permanently?')) return;
+      apiPost({ action: 'deleteEntry', sheet: 'Chats', id: editingChatId })
+        .then(function () { closeModal('chat-modal'); resetChatForm(); loadChats(); })
+        .catch(function () { alert('Failed to delete. Please try again.'); });
     });
   }
 
@@ -715,15 +938,25 @@
   function initModals() {
     document.querySelectorAll('.modal-x').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        closeModal(btn.getAttribute('data-close'));
+        var id = btn.getAttribute('data-close');
+        closeModal(id);
+        resetFormForModal(id);
       });
     });
     document.querySelectorAll('.modal-bg').forEach(function (bg) {
       bg.addEventListener('click', function () {
         var modal = bg.closest('.modal');
-        if (modal) hide(modal);
+        if (!modal) return;
+        hide(modal);
+        resetFormForModal(modal.id);
       });
     });
+  }
+
+  function resetFormForModal(id) {
+    if (id === 'post-modal' && typeof resetPostForm === 'function') resetPostForm();
+    else if (id === 'chat-modal' && typeof resetChatForm === 'function') resetChatForm();
+    else if (id === 'timeline-modal' && typeof resetTimelineForm === 'function') resetTimelineForm();
   }
 
   // ============================================
@@ -765,6 +998,18 @@
     loadChats();
   }
 
+  function initEditDelegate() {
+    document.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('.edit-btn') : null;
+      if (!btn) return;
+      var id = btn.getAttribute('data-id');
+      var type = btn.getAttribute('data-type');
+      if (type === 'post') openEditPost(id);
+      else if (type === 'chat') openEditChat(id);
+      else if (type === 'timeline') openEditTimeline(id);
+    });
+  }
+
   // ============================================
   // Main Init
   // ============================================
@@ -777,6 +1022,7 @@
     initTimelineForm();
     initChatForm();
     initLightbox();
+    initEditDelegate();
 
     if (isAuthed()) {
       hide($('gate'));
