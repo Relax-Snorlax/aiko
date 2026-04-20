@@ -123,7 +123,8 @@
       document.body.appendChild(form);
 
       var resolved = false;
-      var hasImage = payload.image && payload.image.length > 0;
+      var hasImage = (payload.image && payload.image.length > 0) ||
+               (payload.images && payload.images.length > 0);
       var timeoutMs = hasImage ? 30000 : 10000;
 
       function cleanup() {
@@ -454,6 +455,258 @@
   }
 
   // ============================================
+  // Chats
+  // ============================================
+  function loadChats() {
+    apiGet('getChats')
+      .then(function (chats) {
+        hide($('chats-loading'));
+        hide($('chats-error'));
+        if (chats && chats.error) {
+          var el = $('chats-error');
+          el.textContent = 'Could not load chats.';
+          show(el);
+          $('chats-list').innerHTML = '';
+          return;
+        }
+        if (!chats || !chats.length) {
+          show($('chats-empty'));
+          $('chats-list').innerHTML = '';
+          return;
+        }
+        hide($('chats-empty'));
+        renderChats(chats);
+      })
+      .catch(function () {
+        hide($('chats-loading'));
+        var el = $('chats-error');
+        el.textContent = 'Could not load chats.';
+        show(el);
+      });
+  }
+
+  function renderChats(chats) {
+    var list = $('chats-list');
+    list.innerHTML = '';
+    chats.sort(function (a, b) { return new Date(b.saved_date) - new Date(a.saved_date); });
+    chats.forEach(function (c) { list.appendChild(createChatCard(c)); });
+  }
+
+  function createChatCard(c) {
+    var card = document.createElement('div');
+    card.className = 'chat-card';
+
+    var html = '<div class="post-meta">' +
+      '<span class="post-author">' + escHtml(c.author) + '</span>' +
+      '<span class="post-date">saved ' + formatDate(c.saved_date) + '</span>' +
+      '</div>';
+
+    if (c.chat_when) {
+      html += '<div class="chat-when">Chat from: ' + escHtml(c.chat_when) + '</div>';
+    }
+
+    if (c.image_urls) {
+      var urls = String(c.image_urls).split(',').map(function (u) { return u.trim(); }).filter(Boolean);
+      var safeUrls = urls.filter(function (u) { return u.indexOf('https://') === 0; });
+      if (safeUrls.length) {
+        html += '<div class="chat-images">';
+        safeUrls.forEach(function (u) {
+          html += '<img class="chat-img" src="' + escHtml(u) + '" alt="Chat screenshot" loading="lazy">';
+        });
+        html += '</div>';
+      }
+    }
+
+    if (c.chat_text) {
+      html += '<pre class="chat-text">' + escHtml(c.chat_text) + '</pre>';
+    }
+
+    if (c.notes) {
+      html += '<div class="chat-notes">' + escHtml(c.notes) + '</div>';
+    }
+
+    card.innerHTML = html;
+    return card;
+  }
+
+  var pendingImages = [];
+
+  function renderChatThumbs() {
+    var container = $('chat-thumbs');
+    container.innerHTML = '';
+    pendingImages.forEach(function (file, idx) {
+      var wrap = document.createElement('div');
+      wrap.className = 'chat-thumb';
+      var img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.alt = '';
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chat-thumb-remove';
+      btn.textContent = '\u00D7';
+      btn.setAttribute('aria-label', 'Remove');
+      btn.addEventListener('click', function () {
+        pendingImages.splice(idx, 1);
+        renderChatThumbs();
+      });
+      wrap.appendChild(img);
+      wrap.appendChild(btn);
+      container.appendChild(wrap);
+    });
+  }
+
+  function addPendingImageFiles(files) {
+    if (!files) return;
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      if (f && f.type && f.type.indexOf('image/') === 0) {
+        pendingImages.push(f);
+      }
+    }
+    renderChatThumbs();
+  }
+
+  function resetChatForm() {
+    pendingImages = [];
+    renderChatThumbs();
+    $('chat-form').reset();
+    hide($('chat-form-error'));
+  }
+
+  function initChatForm() {
+    var dropzone = $('chat-dropzone');
+    var fileInput = $('chat-images');
+
+    $('new-chat-btn').addEventListener('click', function () {
+      var saved = getCookie(CONFIG.AUTHOR_COOKIE);
+      if (saved) $('chat-author').value = saved;
+      openModal('chat-modal');
+    });
+
+    // File picker — clicking the dropzone opens the native file dialog
+    dropzone.addEventListener('click', function (e) {
+      // Don't trigger when clicking the remove button on a thumb
+      if (e.target.closest('.chat-thumb-remove')) return;
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', function () {
+      addPendingImageFiles(fileInput.files);
+      fileInput.value = '';
+    });
+
+    // Drag & drop
+    dropzone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      dropzone.classList.add('drag-over');
+    });
+    dropzone.addEventListener('dragleave', function () {
+      dropzone.classList.remove('drag-over');
+    });
+    dropzone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer && e.dataTransfer.files) {
+        addPendingImageFiles(e.dataTransfer.files);
+      }
+    });
+
+    // Clipboard paste — listens on document while the modal is open
+    document.addEventListener('paste', function (e) {
+      if ($('chat-modal').classList.contains('hidden')) return;
+      if (!e.clipboardData) return;
+      var items = e.clipboardData.items;
+      if (!items) return;
+      var files = [];
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (it.kind === 'file' && it.type.indexOf('image/') === 0) {
+          var f = it.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length) {
+        e.preventDefault();
+        addPendingImageFiles(files);
+      }
+    });
+
+    $('chat-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var errEl = $('chat-form-error');
+      var text = $('chat-text').value.trim();
+      if (!text && pendingImages.length === 0) {
+        errEl.textContent = 'Add chat text or at least one screenshot.';
+        show(errEl);
+        return;
+      }
+      hide(errEl);
+
+      var btn = $('chat-submit');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      var author = $('chat-author').value;
+      setCookie(CONFIG.AUTHOR_COOKIE, author, 365);
+
+      function done() {
+        closeModal('chat-modal');
+        resetChatForm();
+        btn.disabled = false;
+        btn.textContent = 'Save Chat';
+        loadChats();
+      }
+
+      function fail() {
+        btn.disabled = false;
+        btn.textContent = 'Save Chat';
+        alert('Failed to save chat. Please try again.');
+      }
+
+      var payload = {
+        action: 'addChat',
+        author: author,
+        chat_text: text,
+        chat_when: $('chat-when').value,
+        notes: $('chat-notes').value
+      };
+
+      if (pendingImages.length === 0) {
+        apiPost(payload).then(done).catch(fail);
+        return;
+      }
+
+      var readers = pendingImages.map(function (file) {
+        return readFileAsBase64(file).then(function (b64) {
+          return { data: b64, type: file.type };
+        });
+      });
+
+      Promise.all(readers).then(function (images) {
+        payload.images = JSON.stringify(images);
+        return apiPost(payload);
+      }).then(done).catch(fail);
+    });
+  }
+
+  function initLightbox() {
+    var box = $('lightbox');
+    var img = $('lightbox-img');
+
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t && t.classList && t.classList.contains('chat-img')) {
+        img.src = t.getAttribute('src');
+        show(box);
+      }
+    });
+
+    box.addEventListener('click', function () {
+      hide(box);
+      img.src = '';
+    });
+  }
+
+  // ============================================
   // Archive Toggle
   // ============================================
   function initArchiveToggle() {
@@ -527,6 +780,7 @@
     loadCountdown();
     loadPosts();
     loadTimeline();
+    loadChats();
   }
 
   // ============================================
@@ -539,6 +793,8 @@
     initCountdownForm();
     initPostForm();
     initTimelineForm();
+    initChatForm();
+    initLightbox();
     initArchiveToggle();
 
     if (isAuthed()) {

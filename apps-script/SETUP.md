@@ -7,7 +7,7 @@
 
 ## 2. Create Sheet Tabs
 
-Create three tabs with these exact column headers in row 1:
+Create four tabs with these exact column headers in row 1:
 
 **Tab: Posts**
 
@@ -26,6 +26,12 @@ Create three tabs with these exact column headers in row 1:
 | A     | B           | C           |
 |-------|-------------|-------------|
 | label | target_date | tbd_message |
+
+**Tab: Chats**
+
+| A  | B          | C      | D         | E          | F         | G     |
+|----|------------|--------|-----------|------------|-----------|-------|
+| id | saved_date | author | chat_text | image_urls | chat_when | notes |
 
 Then add an initial countdown row (row 2) in the Countdown tab:
 
@@ -73,3 +79,5 @@ If you edit Code.gs later:
 2. Click the pencil icon on your deployment
 3. Set version to **New version**
 4. Click **Deploy**
+
+**Note:** After editing `Code.gs` you MUST redeploy (new version) for the changes to take effect. The existing deployment URL is reused across redeploys, so no frontend config change is needed.
