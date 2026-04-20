@@ -359,6 +359,7 @@
     }
     if (!p) { alert('Post not found — please refresh.'); return; }
 
+    resetPostForm();
     $('post-author').value = p.author || '';
     $('post-title').value = p.title || '';
     $('post-body').value = p.body || '';
@@ -681,7 +682,7 @@
     var container = $('chat-thumbs');
     container.innerHTML = '';
 
-    keptImageUrls.forEach(function (url, idx) {
+    keptImageUrls.forEach(function (url) {
       var wrap = document.createElement('div');
       wrap.className = 'chat-thumb';
       var img = document.createElement('img');
@@ -693,7 +694,8 @@
       btn.textContent = '\u00D7';
       btn.setAttribute('aria-label', 'Remove');
       btn.addEventListener('click', function () {
-        keptImageUrls.splice(idx, 1);
+        var i = keptImageUrls.indexOf(url);
+        if (i !== -1) keptImageUrls.splice(i, 1);
         renderChatThumbs();
       });
       wrap.appendChild(img);
@@ -701,7 +703,7 @@
       container.appendChild(wrap);
     });
 
-    pendingImages.forEach(function (file, idx) {
+    pendingImages.forEach(function (file) {
       var wrap = document.createElement('div');
       wrap.className = 'chat-thumb';
       var img = document.createElement('img');
@@ -713,7 +715,8 @@
       btn.textContent = '\u00D7';
       btn.setAttribute('aria-label', 'Remove');
       btn.addEventListener('click', function () {
-        pendingImages.splice(idx, 1);
+        var i = pendingImages.indexOf(file);
+        if (i !== -1) pendingImages.splice(i, 1);
         renderChatThumbs();
       });
       wrap.appendChild(img);
