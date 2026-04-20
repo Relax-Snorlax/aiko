@@ -80,4 +80,4 @@ If you edit Code.gs later:
 3. Set version to **New version**
 4. Click **Deploy**
 
-**Note:** After adding the Chats endpoints, the existing deployment URL still works — Apps Script routes new `action` values without a URL change. You only need to redeploy if you want your changes to be live.
+**Note:** After editing `Code.gs` you MUST redeploy (new version) for the changes to take effect. The existing deployment URL is reused across redeploys, so no frontend config change is needed.

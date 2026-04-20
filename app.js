@@ -461,6 +461,14 @@
     apiGet('getChats')
       .then(function (chats) {
         hide($('chats-loading'));
+        hide($('chats-error'));
+        if (chats && chats.error) {
+          var el = $('chats-error');
+          el.textContent = 'Could not load chats.';
+          show(el);
+          $('chats-list').innerHTML = '';
+          return;
+        }
         if (!chats || !chats.length) {
           show($('chats-empty'));
           $('chats-list').innerHTML = '';
