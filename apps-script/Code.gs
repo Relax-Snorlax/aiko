@@ -38,6 +38,8 @@ function doPost(e) {
       case 'addTimeline':      result = addTimeline(e.parameter); break;
       case 'updateCountdown':  result = updateCountdown(e.parameter); break;
       case 'addChat':          result = addChat(e.parameter); break;
+      case 'editEntry':        result = editEntry(e.parameter); break;
+      case 'deleteEntry':      result = deleteEntry(e.parameter); break;
       default:                 result = { error: 'Unknown action: ' + action };
     }
   } catch (err) {
@@ -302,6 +304,29 @@ function editEntry(params) {
   }
 
   return { success: true, id: id };
+}
+
+function deleteEntry(params) {
+  var sheetName = params.sheet;
+  var id = params.id;
+  if (!EDITABLE_SHEETS[sheetName]) return { error: 'Unknown sheet: ' + sheetName };
+  if (!id) return { error: 'Missing id' };
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) return { error: sheetName + ' tab not found' };
+
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idCol = headers.indexOf('id');
+  if (idCol < 0) return { error: sheetName + ' sheet missing id column' };
+
+  for (var r = 1; r < data.length; r++) {
+    if (String(data[r][idCol]) === String(id)) {
+      sheet.deleteRow(r + 1);
+      return { success: true };
+    }
+  }
+  return { error: 'Entry not found' };
 }
 
 // --- Image Upload ---
