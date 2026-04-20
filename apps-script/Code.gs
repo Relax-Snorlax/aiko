@@ -78,8 +78,8 @@ function getTimeline() {
   var data = sheet.getDataRange().getValues();
   if (data.length === 0) return [];
 
-  var headers = ['date', 'title', 'description'];
-  var startRow = (data[0][0] === 'date') ? 1 : 0;
+  var headers = ['id', 'date', 'title', 'description'];
+  var startRow = (data[0][0] === 'id') ? 1 : 0;
 
   return data.slice(startRow).map(function(row) {
     var obj = {};
@@ -88,6 +88,22 @@ function getTimeline() {
     });
     return obj;
   });
+}
+
+function backfillTimelineIds() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Timeline');
+  if (!sheet) return { error: 'Timeline tab not found' };
+  var data = sheet.getDataRange().getValues();
+  if (data.length === 0) return { filled: 0 };
+  var startRow = (data[0][0] === 'id') ? 1 : 0;
+  var filled = 0;
+  for (var r = startRow; r < data.length; r++) {
+    if (!data[r][0]) {
+      sheet.getRange(r + 1, 1).setValue(Utilities.getUuid());
+      filled++;
+    }
+  }
+  return { filled: filled };
 }
 
 function getChats() {
@@ -143,8 +159,9 @@ function addPost(params) {
 
 function addTimeline(params) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Timeline');
-  sheet.appendRow([params.date, params.title, params.description || '']);
-  return { success: true };
+  var id = Utilities.getUuid();
+  sheet.appendRow([id, params.date, params.title, params.description || '']);
+  return { success: true, id: id };
 }
 
 function updateCountdown(params) {
