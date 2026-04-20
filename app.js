@@ -584,6 +584,42 @@
       fileInput.value = '';
     });
 
+    // Drag & drop
+    dropzone.addEventListener('dragover', function (e) {
+      e.preventDefault();
+      dropzone.classList.add('drag-over');
+    });
+    dropzone.addEventListener('dragleave', function () {
+      dropzone.classList.remove('drag-over');
+    });
+    dropzone.addEventListener('drop', function (e) {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer && e.dataTransfer.files) {
+        addPendingImageFiles(e.dataTransfer.files);
+      }
+    });
+
+    // Clipboard paste — listens on document while the modal is open
+    document.addEventListener('paste', function (e) {
+      if ($('chat-modal').classList.contains('hidden')) return;
+      if (!e.clipboardData) return;
+      var items = e.clipboardData.items;
+      if (!items) return;
+      var files = [];
+      for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        if (it.kind === 'file' && it.type.indexOf('image/') === 0) {
+          var f = it.getAsFile();
+          if (f) files.push(f);
+        }
+      }
+      if (files.length) {
+        e.preventDefault();
+        addPendingImageFiles(files);
+      }
+    });
+
     $('chat-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var errEl = $('chat-form-error');
