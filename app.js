@@ -465,9 +465,12 @@
   // ============================================
   // Timeline
   // ============================================
+  var lastTimeline = [];
+
   function loadTimeline() {
     apiGet('getTimeline')
       .then(function (entries) {
+        lastTimeline = entries || [];
         hide($('timeline-loading'));
         if (!entries.length) {
           show($('timeline-empty'));
@@ -507,9 +510,48 @@
     });
   }
 
+  var editingTimelineId = null;
+
+  function resetTimelineForm() {
+    editingTimelineId = null;
+    $('timeline-form').reset();
+    hide($('tl-delete-btn'));
+    $('timeline-modal').querySelector('.modal-head h3').textContent = 'Add Milestone';
+    $('tl-submit').textContent = 'Add Milestone';
+  }
+
+  function openEditTimeline(id) {
+    var entry = null;
+    for (var i = 0; i < lastTimeline.length; i++) {
+      if (String(lastTimeline[i].id) === String(id)) { entry = lastTimeline[i]; break; }
+    }
+    if (!entry) { alert('Milestone not found — please refresh.'); return; }
+
+    resetTimelineForm();
+    var dateStr = entry.date ? String(entry.date).slice(0, 10) : '';
+    $('tl-date').value = dateStr;
+    $('tl-title').value = entry.title || '';
+    $('tl-desc').value = entry.description || '';
+
+    editingTimelineId = entry.id;
+    $('timeline-modal').querySelector('.modal-head h3').textContent = 'Edit Milestone';
+    $('tl-submit').textContent = 'Save Changes';
+    show($('tl-delete-btn'));
+    openModal('timeline-modal');
+  }
+
   function initTimelineForm() {
     $('new-tl-btn').addEventListener('click', function () {
+      resetTimelineForm();
       openModal('timeline-modal');
+    });
+
+    $('tl-delete-btn').addEventListener('click', function () {
+      if (!editingTimelineId) return;
+      if (!confirm('Delete this milestone permanently?')) return;
+      apiPost({ action: 'deleteEntry', sheet: 'Timeline', id: editingTimelineId })
+        .then(function () { closeModal('timeline-modal'); resetTimelineForm(); loadTimeline(); })
+        .catch(function () { alert('Failed to delete. Please try again.'); });
     });
 
     $('timeline-form').addEventListener('submit', function (e) {
@@ -518,22 +560,37 @@
       btn.disabled = true;
       btn.textContent = 'Saving...';
 
-      apiPost({
-        action: 'addTimeline',
-        date: $('tl-date').value,
-        title: $('tl-title').value,
-        description: $('tl-desc').value
-      }).then(function () {
+      function done() {
         closeModal('timeline-modal');
-        $('timeline-form').reset();
+        resetTimelineForm();
         btn.disabled = false;
-        btn.textContent = 'Add Milestone';
         loadTimeline();
-      }).catch(function () {
+      }
+      function fail() {
         btn.disabled = false;
-        btn.textContent = 'Add Milestone';
-        alert('Failed to add milestone. Please try again.');
-      });
+        btn.textContent = editingTimelineId ? 'Save Changes' : 'Add Milestone';
+        alert('Failed to save. Please try again.');
+      }
+
+      var payload;
+      if (editingTimelineId) {
+        payload = {
+          action: 'editEntry',
+          sheet: 'Timeline',
+          id: editingTimelineId,
+          date: $('tl-date').value,
+          title: $('tl-title').value,
+          description: $('tl-desc').value
+        };
+      } else {
+        payload = {
+          action: 'addTimeline',
+          date: $('tl-date').value,
+          title: $('tl-title').value,
+          description: $('tl-desc').value
+        };
+      }
+      apiPost(payload).then(done).catch(fail);
     });
   }
 
