@@ -454,6 +454,72 @@
   }
 
   // ============================================
+  // Chats
+  // ============================================
+  function loadChats() {
+    apiGet('getChats')
+      .then(function (chats) {
+        hide($('chats-loading'));
+        if (!chats || !chats.length) {
+          show($('chats-empty'));
+          $('chats-list').innerHTML = '';
+          return;
+        }
+        hide($('chats-empty'));
+        renderChats(chats);
+      })
+      .catch(function () {
+        hide($('chats-loading'));
+        var el = $('chats-error');
+        el.textContent = 'Could not load chats.';
+        show(el);
+      });
+  }
+
+  function renderChats(chats) {
+    var list = $('chats-list');
+    list.innerHTML = '';
+    chats.sort(function (a, b) { return new Date(b.saved_date) - new Date(a.saved_date); });
+    chats.forEach(function (c) { list.appendChild(createChatCard(c)); });
+  }
+
+  function createChatCard(c) {
+    var card = document.createElement('div');
+    card.className = 'chat-card';
+
+    var html = '<div class="post-meta">' +
+      '<span class="post-author">' + escHtml(c.author) + '</span>' +
+      '<span class="post-date">saved ' + formatDate(c.saved_date) + '</span>' +
+      '</div>';
+
+    if (c.chat_when) {
+      html += '<div class="chat-when">Chat from: ' + escHtml(c.chat_when) + '</div>';
+    }
+
+    if (c.image_urls) {
+      var urls = String(c.image_urls).split(',').map(function (u) { return u.trim(); }).filter(Boolean);
+      if (urls.length) {
+        html += '<div class="chat-images">';
+        urls.forEach(function (u) {
+          html += '<img class="chat-img" src="' + escHtml(u) + '" alt="Chat screenshot" loading="lazy">';
+        });
+        html += '</div>';
+      }
+    }
+
+    if (c.chat_text) {
+      html += '<pre class="chat-text">' + escHtml(c.chat_text) + '</pre>';
+    }
+
+    if (c.notes) {
+      html += '<div class="chat-notes">' + escHtml(c.notes) + '</div>';
+    }
+
+    card.innerHTML = html;
+    return card;
+  }
+
+  // ============================================
   // Archive Toggle
   // ============================================
   function initArchiveToggle() {
@@ -527,6 +593,7 @@
     loadCountdown();
     loadPosts();
     loadTimeline();
+    loadChats();
   }
 
   // ============================================
