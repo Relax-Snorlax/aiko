@@ -1,11 +1,10 @@
 (function () {
   'use strict';
 
-  // Auth gate — redirect to the main site if the password cookie is missing
-  var authed = document.cookie.split('; ').some(function (c) {
-    return c.indexOf('ren-aiko-auth=true') === 0;
-  });
-  if (!authed) {
+  // Auth gate (defense in depth — head inline script handles the primary redirect).
+  // Matches the getCookie pattern used in app.js.
+  var match = document.cookie.match(/(^| )ren-aiko-auth=([^;]+)/);
+  if (!match || match[2] !== 'true') {
     window.location.replace('/');
     return;
   }

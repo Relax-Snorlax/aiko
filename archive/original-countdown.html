@@ -6,6 +6,14 @@
   <title>The Original Countdown &mdash; REN &amp; AIKO</title>
   <meta name="theme-color" content="#0a0a0f">
   <link rel="stylesheet" href="../style.css">
+  <script>
+    (function () {
+      var match = document.cookie.match(/(^| )ren-aiko-auth=([^;]+)/);
+      if (!match || match[2] !== 'true') {
+        window.location.replace('/');
+      }
+    })();
+  </script>
 </head>
 <body>
 
