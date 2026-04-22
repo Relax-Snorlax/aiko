@@ -7,7 +7,7 @@
 
 ## 2. Create Sheet Tabs
 
-Create four tabs with these exact column headers in row 1:
+Create five tabs with these exact column headers in row 1:
 
 **Tab: Posts**
 
@@ -32,6 +32,12 @@ Create four tabs with these exact column headers in row 1:
 | A  | B          | C      | D         | E          | F         | G     |
 |----|------------|--------|-----------|------------|-----------|-------|
 | id | saved_date | author | chat_text | image_urls | chat_when | notes |
+
+**Tab: Log**
+
+| A         | B    | C  | D    | E      | F       | G          |
+|-----------|------|----|------|--------|---------|------------|
+| timestamp | user | ip | city | region | country | user_agent |
 
 Then add an initial countdown row (row 2) in the Countdown tab:
 

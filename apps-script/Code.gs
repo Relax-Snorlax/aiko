@@ -40,6 +40,7 @@ function doPost(e) {
       case 'addChat':          result = addChat(e.parameter); break;
       case 'editEntry':        result = editEntry(e.parameter); break;
       case 'deleteEntry':      result = deleteEntry(e.parameter); break;
+      case 'logLogin':         result = logLogin(e.parameter); break;
       default:                 result = { error: 'Unknown action: ' + action };
     }
   } catch (err) {
@@ -327,6 +328,25 @@ function deleteEntry(params) {
     }
   }
   return { error: 'Entry not found' };
+}
+
+function logLogin(params) {
+  var user = params.user || '';
+  if (!user) return { error: 'Missing user' };
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Log');
+  if (!sheet) return { error: 'Log tab not found' };
+
+  sheet.appendRow([
+    new Date().toISOString(),
+    user,
+    params.ip || '',
+    params.city || '',
+    params.region || '',
+    params.country || '',
+    params.user_agent || ''
+  ]);
+  return { success: true };
 }
 
 // --- Image Upload ---

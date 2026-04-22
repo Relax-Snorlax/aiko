@@ -6,9 +6,13 @@
   // ============================================
   var CONFIG = {
     SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby95uoM6nGd8lsKG-_u_aco5TJHM8iK4Sbod9yu-J4HsAjGyn6Ebpm_S-qS4oiD6jMz/exec',
-    PASSWORD: 'DreamGirl',
+    PASSWORDS: {
+      'DreamGirl': 'Linh',
+      'DreamBoy':  'Brian'
+    },
     AUTH_COOKIE: 'ren-aiko-auth',
-    AUTHOR_COOKIE: 'ren-aiko-author'
+    AUTHOR_COOKIE: 'ren-aiko-author',
+    USER_COOKIE: 'ren-aiko-user'
   };
 
   // ============================================
@@ -62,8 +66,10 @@
     var error = $('gate-error');
 
     function attempt() {
-      if (input.value === CONFIG.PASSWORD) {
+      var typed = input.value;
+      if (CONFIG.PASSWORDS.hasOwnProperty(typed)) {
         setCookie(CONFIG.AUTH_COOKIE, 'true', 3650);
+        setCookie(CONFIG.USER_COOKIE, CONFIG.PASSWORDS[typed], 3650);
         gate.style.transition = 'opacity 0.5s';
         gate.style.opacity = '0';
         setTimeout(function () {
@@ -383,7 +389,7 @@
   function initPostForm() {
     $('new-post-btn').addEventListener('click', function () {
       resetPostForm();
-      var saved = getCookie(CONFIG.AUTHOR_COOKIE);
+      var saved = getCookie(CONFIG.AUTHOR_COOKIE) || getCookie(CONFIG.USER_COOKIE);
       if (saved) $('post-author').value = saved;
       openModal('post-modal');
     });
@@ -781,7 +787,7 @@
 
     $('new-chat-btn').addEventListener('click', function () {
       resetChatForm();
-      var saved = getCookie(CONFIG.AUTHOR_COOKIE);
+      var saved = getCookie(CONFIG.AUTHOR_COOKIE) || getCookie(CONFIG.USER_COOKIE);
       if (saved) $('chat-author').value = saved;
       openModal('chat-modal');
     });
@@ -991,7 +997,35 @@
   // ============================================
   // Dashboard Init
   // ============================================
+  function logLoginEvent() {
+    var user = getCookie(CONFIG.USER_COOKIE);
+    if (!user) return;
+
+    var ua = navigator.userAgent || '';
+    fetch('https://ipapi.co/json/')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        apiPost({
+          action: 'logLogin',
+          user: user,
+          ip: data.ip || '',
+          city: data.city || '',
+          region: data.region || '',
+          country: data.country_name || '',
+          user_agent: ua
+        }).catch(function () {});
+      })
+      .catch(function () {
+        apiPost({
+          action: 'logLogin',
+          user: user,
+          user_agent: ua
+        }).catch(function () {});
+      });
+  }
+
   function loadDashboard() {
+    logLoginEvent();
     loadCountdown();
     loadPosts();
     loadTimeline();
