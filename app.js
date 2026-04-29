@@ -1319,7 +1319,9 @@
   function maybeShowAnnouncement() {
     if (getCookie(CONFIG.USER_COOKIE) !== 'Linh') return;
     if (getCookie(CONFIG.SEEN_ANNOUNCE_COOKIE)) return;
-    show($('announce-modal'));
+    var modal = $('announce-modal');
+    if (!modal) return;
+    show(modal);
   }
 
   // ============================================
