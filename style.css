@@ -997,3 +997,75 @@ select.form-input { appearance: none; cursor: pointer; }
   border-color: #e85d75;
 }
 
+/* ============================================
+   Feedback
+   ============================================ */
+.feedback-card {
+  position: relative;
+  background: var(--surface, #15151c);
+  border: 1px solid var(--border, #2a2a3a);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.fb-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  opacity: 0.75;
+  margin-bottom: 6px;
+}
+.fb-author { font-weight: 600; }
+.fb-hearts {
+  font-size: 22px;
+  color: #ff7a8c;
+  letter-spacing: 2px;
+  margin: 4px 0 8px;
+}
+.fb-comment {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* Heart picker (modal) */
+.heart-picker {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 14px;
+}
+.heart-btn {
+  background: transparent;
+  border: 1px solid #2a2a3a;
+  color: #5a5a66;
+  font-size: 28px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, transform 0.08s;
+}
+.heart-btn:hover { transform: translateY(-1px); }
+.heart-btn.filled {
+  color: #ff7a8c;
+  border-color: #ff7a8c;
+}
+
+/* "New feature" glow on action buttons */
+.action-btn.glow-new {
+  position: relative;
+  animation: glowNew 2.4s ease-in-out infinite;
+}
+@keyframes glowNew {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(255,122,140,0.5),
+      0 0 8px rgba(255,179,71,0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(255,122,140,0),
+      0 0 18px rgba(255,179,71,0.6),
+      0 0 28px rgba(255,122,140,0.4);
+  }
+}
+
