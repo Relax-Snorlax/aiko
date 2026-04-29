@@ -461,7 +461,13 @@ function editEntry(params) {
     if (params[field] === undefined) return;
     var colIndex = headers.indexOf(field);
     if (colIndex < 0) return;
-    sheet.getRange(rowIndex + 1, colIndex + 1).setValue(params[field]);
+    var value = params[field];
+    if (sheetName === 'Feedback' && field === 'hearts') {
+      var h = parseInt(value, 10);
+      if (isNaN(h) || h < 0 || h > 5) return; // skip invalid hearts edit
+      value = h;
+    }
+    sheet.getRange(rowIndex + 1, colIndex + 1).setValue(value);
   });
 
   // Apply computed image URL AFTER allowlist so fresh uploads win.

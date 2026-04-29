@@ -1214,6 +1214,7 @@
     if (id === 'post-modal' && typeof resetPostForm === 'function') resetPostForm();
     else if (id === 'chat-modal' && typeof resetChatForm === 'function') resetChatForm();
     else if (id === 'timeline-modal' && typeof resetTimelineForm === 'function') resetTimelineForm();
+    else if (id === 'feedback-modal' && typeof resetFeedbackForm === 'function') resetFeedbackForm();
   }
 
   // ============================================
