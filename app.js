@@ -939,6 +939,188 @@
   }
 
   // ============================================
+  // Feedback
+  // ============================================
+  var lastFeedback = [];
+
+  function loadFeedback() {
+    apiGet('getFeedback')
+      .then(function (rows) {
+        lastFeedback = rows || [];
+        hide($('feedback-loading'));
+        if (!lastFeedback.length) {
+          show($('feedback-empty'));
+          $('feedback-feed').innerHTML = '';
+          return;
+        }
+        hide($('feedback-empty'));
+        renderFeedback(lastFeedback);
+      })
+      .catch(function () {
+        hide($('feedback-loading'));
+        var el = $('feedback-error');
+        el.textContent = 'Could not load feedback.';
+        show(el);
+      });
+  }
+
+  function renderFeedback(rows) {
+    var feed = $('feedback-feed');
+    feed.innerHTML = '';
+    rows.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+    rows.forEach(function (f) { feed.appendChild(createFeedbackCard(f)); });
+  }
+
+  function createFeedbackCard(f) {
+    var card = document.createElement('div');
+    card.className = 'feedback-card';
+    var hearts = parseInt(f.hearts, 10) || 0;
+    var heartStr = '';
+    for (var i = 1; i <= 5; i++) heartStr += (i <= hearts) ? '♥' : '♡';
+    var html =
+      '<button class="edit-btn" data-id="' + escHtml(f.id) + '" data-type="feedback" title="Edit">&#9998;</button>' +
+      '<div class="fb-meta">' +
+        '<span class="fb-author">' + escHtml(f.author) + ' &rarr; ' + escHtml(f.target) + '</span>' +
+        '<span class="fb-date">' + formatDate(f.date) + '</span>' +
+      '</div>' +
+      '<div class="fb-hearts">' + heartStr + '</div>';
+    if (f.comment) {
+      html += '<div class="fb-comment">' + escHtml(f.comment) + '</div>';
+    }
+    card.innerHTML = html;
+    return card;
+  }
+
+  var editingFeedbackId = null;
+
+  function setHeartPickerValue(v) {
+    var picker = $('heart-picker');
+    picker.setAttribute('data-value', String(v));
+    var btns = picker.querySelectorAll('.heart-btn');
+    btns.forEach(function (b) {
+      var idx = parseInt(b.getAttribute('data-h'), 10);
+      if (idx <= v) {
+        b.classList.add('filled');
+        b.innerHTML = '♥';
+      } else {
+        b.classList.remove('filled');
+        b.innerHTML = '♡';
+      }
+    });
+  }
+
+  function getHeartPickerValue() {
+    return parseInt($('heart-picker').getAttribute('data-value'), 10) || 0;
+  }
+
+  function resetFeedbackForm() {
+    editingFeedbackId = null;
+    $('feedback-form').reset();
+    setHeartPickerValue(0);
+    hide($('feedback-delete-btn'));
+    $('feedback-modal').querySelector('.modal-head h3').textContent = 'Rate Your Partner';
+    $('feedback-submit').textContent = 'Send';
+  }
+
+  function openEditFeedback(id) {
+    var f = null;
+    for (var i = 0; i < lastFeedback.length; i++) {
+      if (String(lastFeedback[i].id) === String(id)) { f = lastFeedback[i]; break; }
+    }
+    if (!f) { alert('Rating not found — please refresh.'); return; }
+    resetFeedbackForm();
+    setHeartPickerValue(parseInt(f.hearts, 10) || 0);
+    $('feedback-comment').value = f.comment || '';
+    editingFeedbackId = f.id;
+    $('feedback-modal').querySelector('.modal-head h3').textContent = 'Edit Rating';
+    $('feedback-submit').textContent = 'Save Changes';
+    show($('feedback-delete-btn'));
+    $('feedback-target-name').textContent = f.target || 'your partner';
+    openModal('feedback-modal');
+  }
+
+  function initFeedbackForm() {
+    // Heart picker click — toggle to N, or to 0 if clicking the same value
+    $('heart-picker').addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('.heart-btn') : null;
+      if (!btn) return;
+      var v = parseInt(btn.getAttribute('data-h'), 10);
+      var current = getHeartPickerValue();
+      setHeartPickerValue(v === current ? 0 : v);
+    });
+
+    $('new-feedback-btn').addEventListener('click', function () {
+      var user = getCookie(CONFIG.USER_COOKIE);
+      if (!user) {
+        alert('Please log out and back in to enable rating.');
+        return;
+      }
+      resetFeedbackForm();
+      var target = (user === 'Brian') ? 'Linh' : 'Brian';
+      $('feedback-target-name').textContent = target;
+      openModal('feedback-modal');
+    });
+
+    $('feedback-delete-btn').addEventListener('click', function () {
+      if (!editingFeedbackId) return;
+      if (!confirm('Delete this rating permanently?')) return;
+      apiPost({ action: 'deleteEntry', sheet: 'Feedback', id: editingFeedbackId })
+        .then(function () {
+          closeModal('feedback-modal');
+          resetFeedbackForm();
+          loadFeedback();
+          loadStats();
+        })
+        .catch(function () { alert('Failed to delete. Please try again.'); });
+    });
+
+    $('feedback-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = $('feedback-submit');
+      btn.disabled = true;
+      btn.textContent = editingFeedbackId ? 'Saving...' : 'Sending...';
+
+      var user = getCookie(CONFIG.USER_COOKIE) || '';
+      var hearts = getHeartPickerValue();
+      var comment = $('feedback-comment').value;
+
+      function done() {
+        closeModal('feedback-modal');
+        resetFeedbackForm();
+        btn.disabled = false;
+        loadFeedback();
+        loadStats();
+      }
+      function fail() {
+        btn.disabled = false;
+        btn.textContent = editingFeedbackId ? 'Save Changes' : 'Send';
+        alert('Failed to save. Please try again.');
+      }
+
+      var payload;
+      if (editingFeedbackId) {
+        payload = {
+          action: 'editEntry',
+          sheet: 'Feedback',
+          id: editingFeedbackId,
+          hearts: hearts,
+          comment: comment
+        };
+      } else {
+        payload = {
+          action: 'addFeedback',
+          user: user,
+          hearts: hearts,
+          comment: comment
+        };
+      }
+      apiPost(payload).then(done).catch(fail);
+    });
+  }
+
+  function loadStats() { /* implemented in Task 13 */ }
+
+  // ============================================
   // Modals
   // ============================================
   function openModal(id) { show($(id)); }
@@ -1033,6 +1215,7 @@
     loadPosts();
     loadTimeline();
     loadChats();
+    loadFeedback();
   }
 
   function initEditDelegate() {
@@ -1044,6 +1227,7 @@
       if (type === 'post') openEditPost(id);
       else if (type === 'chat') openEditChat(id);
       else if (type === 'timeline') openEditTimeline(id);
+      else if (type === 'feedback') openEditFeedback(id);
     });
   }
 
@@ -1058,6 +1242,7 @@
     initPostForm();
     initTimelineForm();
     initChatForm();
+    initFeedbackForm();
     initLightbox();
     initEditDelegate();
 
