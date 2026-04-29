@@ -1290,6 +1290,36 @@
     loadChats();
     loadFeedback();
     loadStats();
+    maybeShowAnnouncement();
+  }
+
+  // ============================================
+  // Feature Announcement (one-time, Linh only)
+  // ============================================
+  function initAnnouncement() {
+    var modal = $('announce-modal');
+    if (!modal) return;
+
+    var logoutBtn = $('announce-logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function () {
+        markAnnouncementSeen();
+        forceLogout();
+      });
+    }
+
+    // Mark seen on any dismissal path (× and backdrop click are auto-wired by initModals;
+    // we add a sibling listener that just persists the seen state).
+    var xBtn = modal.querySelector('.modal-x');
+    if (xBtn) xBtn.addEventListener('click', markAnnouncementSeen);
+    var bg = modal.querySelector('.modal-bg');
+    if (bg) bg.addEventListener('click', markAnnouncementSeen);
+  }
+
+  function maybeShowAnnouncement() {
+    if (getCookie(CONFIG.USER_COOKIE) !== 'Linh') return;
+    if (getCookie(CONFIG.SEEN_ANNOUNCE_COOKIE)) return;
+    show($('announce-modal'));
   }
 
   // ============================================
@@ -1348,6 +1378,7 @@
     initEditDelegate();
     initFeatureGlow();
     initLogoutButtons();
+    initAnnouncement();
 
     if (isAuthed()) {
       hide($('gate'));
