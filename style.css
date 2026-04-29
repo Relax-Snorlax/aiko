@@ -1069,3 +1069,143 @@ select.form-input { appearance: none; cursor: pointer; }
   }
 }
 
+/* ============================================
+   Stats footer
+   ============================================ */
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 32px 16px 24px;
+}
+.stats-footer {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.stats-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
+  gap: 6px;
+}
+.stats-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: #1b1b20;
+}
+.stats-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.stats-name { font-weight: 600; font-size: 15px; }
+.stats-points {
+  font-size: 13px;
+  color: #ffb347;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.stats-rating {
+  font-size: 13px;
+  opacity: 0.78;
+}
+.footer-tagline {
+  font-size: 12px;
+  opacity: 0.7;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .stats-footer { flex-direction: column; gap: 18px; }
+}
+
+/* ============================================
+   Avatar tiers (manga aura / energy)
+   ============================================ */
+.tier-0 {
+  box-shadow: 0 0 0 2px #1b1b20, 0 0 0 3px #2a2a3a;
+}
+.tier-1 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #d96b7c,
+    0 0 8px rgba(217,107,124,0.35);
+}
+.tier-2 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #d96b7c,
+    0 0 14px rgba(217,107,124,0.5);
+}
+.tier-3 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #d96b7c,
+    0 0 20px rgba(217,107,124,0.65),
+    0 0 0 7px rgba(255,179,71,0.5);
+}
+.tier-4 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 7px #d96b7c,
+    0 0 22px rgba(217,107,124,0.7);
+}
+.tier-5 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 7px #d96b7c,
+    0 0 26px rgba(255,179,71,0.65),
+    0 0 44px rgba(217,107,124,0.4);
+  animation: tierBreathe 3.6s ease-in-out infinite;
+}
+.tier-6 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 7px #d96b7c,
+    0 0 0 10px rgba(255,179,71,0.5),
+    0 0 30px rgba(255,179,71,0.7),
+    0 0 56px rgba(217,107,124,0.5);
+  animation: tierBreathe 3.2s ease-in-out infinite;
+}
+.tier-7 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 7px #d96b7c,
+    0 0 0 11px #ffb347,
+    0 0 36px rgba(255,179,71,0.85),
+    0 0 72px rgba(217,107,124,0.55);
+  animation: tierBreathe 2.8s ease-in-out infinite;
+}
+.tier-8 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 8px #d96b7c,
+    0 0 0 12px #ffb347,
+    0 0 44px rgba(255,179,71,0.95),
+    0 0 80px rgba(217,107,124,0.7);
+  animation: tierMax 3s linear infinite;
+}
+
+@keyframes tierBreathe {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.18); }
+}
+@keyframes tierMax {
+  0%   { filter: brightness(1)    hue-rotate(0deg); }
+  50%  { filter: brightness(1.22) hue-rotate(20deg); }
+  100% { filter: brightness(1)    hue-rotate(0deg); }
+}
