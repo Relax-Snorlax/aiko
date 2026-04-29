@@ -9,7 +9,8 @@ var DRIVE_FOLDER_ID = 'YOUR_FOLDER_ID_HERE';
 var EDITABLE_SHEETS = {
   'Posts':    ['author', 'title', 'body', 'image_url', 'type'],
   'Chats':    ['author', 'chat_text', 'image_urls', 'chat_when', 'notes'],
-  'Timeline': ['date', 'title', 'description']
+  'Timeline': ['date', 'title', 'description'],
+  'Feedback': ['hearts', 'comment']
 };
 
 // Returns the sheet by name. Creates it (with the given header row) if missing.
@@ -323,6 +324,43 @@ function addChat(params) {
     success: true, id: id, saved_date: savedDate, image_urls: imageUrls,
     points_awarded: award ? award.amount : 0
   };
+}
+
+function addFeedback(params) {
+  var user = params.user;
+  if (!isValidUser(user)) return { error: 'Unknown user' };
+
+  var hearts = parseInt(params.hearts, 10);
+  if (isNaN(hearts) || hearts < 0 || hearts > 5) {
+    return { error: 'Hearts must be 0-5' };
+  }
+  var comment = params.comment || '';
+  var target = (user === 'Brian') ? 'Linh' : 'Brian';
+
+  var sheet = ensureSheet('Feedback', FEEDBACK_HEADERS);
+  var id = Utilities.getUuid();
+  var date = new Date().toISOString();
+  sheet.appendRow([id, date, user, target, hearts, comment]);
+
+  var award = awardPointsIfEligible(user, 'feedback', id);
+  return {
+    success: true, id: id, date: date, target: target,
+    points_awarded: award ? award.amount : 0
+  };
+}
+
+function getFeedback() {
+  var sheet = ensureSheet('Feedback', FEEDBACK_HEADERS);
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  var headers = data[0];
+  return data.slice(1).map(function (row) {
+    var obj = {};
+    headers.forEach(function (h, i) {
+      obj[h] = row[i] instanceof Date ? row[i].toISOString() : row[i];
+    });
+    return obj;
+  });
 }
 
 function editEntry(params) {
