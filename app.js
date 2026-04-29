@@ -452,6 +452,7 @@
       } else {
         payload = {
           action: 'addPost',
+          user: getCookie(CONFIG.USER_COOKIE) || '',
           author: author,
           title: $('post-title').value,
           body: $('post-body').value,
@@ -592,6 +593,7 @@
       } else {
         payload = {
           action: 'addTimeline',
+          user: getCookie(CONFIG.USER_COOKIE) || '',
           date: $('tl-date').value,
           title: $('tl-title').value,
           description: $('tl-desc').value
@@ -884,6 +886,7 @@
       } else {
         payload = {
           action: 'addChat',
+          user: getCookie(CONFIG.USER_COOKIE) || '',
           author: author,
           chat_text: text,
           chat_when: $('chat-when').value,
