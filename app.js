@@ -1295,10 +1295,14 @@
   // ============================================
   // Logout
   // ============================================
-  function logout() {
-    if (!confirm('Log out?')) return;
+  function forceLogout() {
     setCookie(CONFIG.AUTH_COOKIE, '', -1);
     location.reload();
+  }
+
+  function logout() {
+    if (!confirm('Log out?')) return;
+    forceLogout();
   }
 
   function initLogoutButtons() {
