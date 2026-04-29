@@ -90,6 +90,8 @@ function doGet(e) {
       case 'getTimeline':   return respond(getTimeline());
       case 'getCountdown':  return respond(getCountdown());
       case 'getChats':      return respond(getChats());
+      case 'getFeedback':   return respond(getFeedback());
+      case 'getStats':      return respond(getStats());
       default:              return respond({ error: 'Unknown action: ' + action });
     }
   } catch (err) {
@@ -106,6 +108,7 @@ function doPost(e) {
       case 'addTimeline':      result = addTimeline(e.parameter); break;
       case 'updateCountdown':  result = updateCountdown(e.parameter); break;
       case 'addChat':          result = addChat(e.parameter); break;
+      case 'addFeedback':      result = addFeedback(e.parameter); break;
       case 'editEntry':        result = editEntry(e.parameter); break;
       case 'deleteEntry':      result = deleteEntry(e.parameter); break;
       case 'logLogin':         result = logLogin(e.parameter); break;
