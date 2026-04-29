@@ -12,7 +12,9 @@
     },
     AUTH_COOKIE: 'ren-aiko-auth',
     AUTHOR_COOKIE: 'ren-aiko-author',
-    USER_COOKIE: 'ren-aiko-user'
+    USER_COOKIE: 'ren-aiko-user',
+    FEATURE_LAUNCH: '2026-04-29T00:00:00Z',
+    GLOW_DAYS: 14
   };
 
   // ============================================
@@ -422,6 +424,7 @@
         resetPostForm();
         btn.disabled = false;
         loadPosts();
+        loadStats();
       }
       function fail() {
         btn.disabled = false;
@@ -573,6 +576,7 @@
         resetTimelineForm();
         btn.disabled = false;
         loadTimeline();
+        loadStats();
       }
       function fail() {
         btn.disabled = false;
@@ -864,6 +868,7 @@
         resetChatForm();
         btn.disabled = false;
         loadChats();
+        loadStats();
       }
       function fail() {
         btn.disabled = false;
@@ -1118,7 +1123,68 @@
     });
   }
 
-  function loadStats() { /* implemented in Task 13 */ }
+  // ============================================
+  // Stats footer
+  // ============================================
+  var TIERS = [
+    { min: 0,    cls: 'tier-0' },
+    { min: 5,    cls: 'tier-1' },
+    { min: 20,   cls: 'tier-2' },
+    { min: 50,   cls: 'tier-3' },
+    { min: 100,  cls: 'tier-4' },
+    { min: 150,  cls: 'tier-5' },
+    { min: 250,  cls: 'tier-6' },
+    { min: 500,  cls: 'tier-7' },
+    { min: 1000, cls: 'tier-8' }
+  ];
+
+  function tierClassFor(points) {
+    var cls = 'tier-0';
+    for (var i = 0; i < TIERS.length; i++) {
+      if (points >= TIERS[i].min) cls = TIERS[i].cls;
+    }
+    return cls;
+  }
+
+  function applyStatsForUser(name, data) {
+    var key = name.toLowerCase(); // 'brian' or 'linh'
+    var avatar = $('stats-avatar-' + key);
+    var pts = $('stats-points-' + key);
+    var rate = $('stats-rating-' + key);
+    if (!avatar || !pts || !rate) return;
+
+    var points = (data && data.points) || 0;
+    var avg = (data && data.avg_hearts) || 0;
+    var count = (data && data.count) || 0;
+
+    // Reset tier classes, then add the one we want
+    avatar.className = 'stats-avatar ' + tierClassFor(points);
+    pts.textContent = points + ' pts';
+    rate.textContent = count
+      ? ('★ ' + avg.toFixed(1) + ' / 5 (' + count + ')')
+      : 'no ratings yet';
+  }
+
+  function loadStats() {
+    apiGet('getStats')
+      .then(function (data) {
+        if (!data || data.error) return;
+        applyStatsForUser('Brian', data.Brian);
+        applyStatsForUser('Linh',  data.Linh);
+      })
+      .catch(function () { /* silent — stats footer keeps placeholder values */ });
+  }
+
+  function initFeatureGlow() {
+    try {
+      var launch = new Date(CONFIG.FEATURE_LAUNCH).getTime();
+      var elapsedDays = (Date.now() - launch) / 86400000;
+      if (elapsedDays >= 0 && elapsedDays < CONFIG.GLOW_DAYS) {
+        var btn = $('new-feedback-btn');
+        if (btn) btn.classList.add('glow-new');
+      }
+    } catch (e) { /* ignore */ }
+  }
 
   // ============================================
   // Modals
@@ -1216,6 +1282,7 @@
     loadTimeline();
     loadChats();
     loadFeedback();
+    loadStats();
   }
 
   function initEditDelegate() {
@@ -1245,6 +1312,7 @@
     initFeedbackForm();
     initLightbox();
     initEditDelegate();
+    initFeatureGlow();
 
     if (isAuthed()) {
       hide($('gate'));
