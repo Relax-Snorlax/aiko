@@ -1209,3 +1209,43 @@ select.form-input { appearance: none; cursor: pointer; }
   50%  { filter: brightness(1.22) hue-rotate(20deg); }
   100% { filter: brightness(1)    hue-rotate(0deg); }
 }
+
+/* ============================================
+   Logout links
+   ============================================ */
+.logout-link {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 8px;
+  letter-spacing: 0.02em;
+  transition: opacity 0.15s, color 0.15s;
+}
+.logout-link:hover {
+  opacity: 1;
+  color: #d96b7c;
+}
+
+/* Header variant — sits between nav and burger */
+#logout-header {
+  margin-left: 8px;
+}
+
+/* Stats footer variant — small, low-key under the user's own card */
+.logout-stats {
+  font-size: 11px;
+  margin-top: 4px;
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+}
+
+/* Tagline variant — inline with Reference link */
+#logout-tagline {
+  font-size: 12px;
+  padding: 0 4px;
+  vertical-align: baseline;
+}

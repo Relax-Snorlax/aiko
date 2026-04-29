@@ -1278,12 +1278,36 @@
 
   function loadDashboard() {
     logLoginEvent();
+    revealUserLogout();
     loadCountdown();
     loadPosts();
     loadTimeline();
     loadChats();
     loadFeedback();
     loadStats();
+  }
+
+  // ============================================
+  // Logout
+  // ============================================
+  function logout() {
+    if (!confirm('Log out?')) return;
+    setCookie(CONFIG.AUTH_COOKIE, '', -1);
+    location.reload();
+  }
+
+  function initLogoutButtons() {
+    ['logout-header', 'logout-tagline', 'logout-stats-brian', 'logout-stats-linh']
+      .forEach(function (id) {
+        var btn = $(id);
+        if (btn) btn.addEventListener('click', logout);
+      });
+  }
+
+  function revealUserLogout() {
+    var user = getCookie(CONFIG.USER_COOKIE);
+    if (user === 'Brian') show($('logout-stats-brian'));
+    else if (user === 'Linh') show($('logout-stats-linh'));
   }
 
   function initEditDelegate() {
@@ -1314,6 +1338,7 @@
     initLightbox();
     initEditDelegate();
     initFeatureGlow();
+    initLogoutButtons();
 
     if (isAuthed()) {
       hide($('gate'));
