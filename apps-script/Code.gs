@@ -34,6 +34,51 @@ function ensureSheet(name, headers) {
   }
 }
 
+var POINTS_HEADERS = ['id', 'date', 'user', 'action_type', 'source_id', 'amount'];
+var FEEDBACK_HEADERS = ['id', 'date', 'author', 'target', 'hearts', 'comment'];
+var COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 hours
+var POINTS_PER_ACTION = 5;
+var VALID_USERS = ['Brian', 'Linh'];
+
+function isValidUser(u) {
+  return VALID_USERS.indexOf(u) >= 0;
+}
+
+function awardPointsIfEligible(user, action_type, source_id) {
+  if (!isValidUser(user)) return null;
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    var sheet = ensureSheet('Points', POINTS_HEADERS);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var userCol = headers.indexOf('user');
+    var actionCol = headers.indexOf('action_type');
+    var dateCol = headers.indexOf('date');
+
+    var now = Date.now();
+    var mostRecent = 0;
+    for (var r = 1; r < data.length; r++) {
+      if (data[r][userCol] === user && data[r][actionCol] === action_type) {
+        var ts = new Date(data[r][dateCol]).getTime();
+        if (!isNaN(ts) && ts > mostRecent) mostRecent = ts;
+      }
+    }
+
+    if (mostRecent && (now - mostRecent) < COOLDOWN_MS) {
+      return null; // on cooldown
+    }
+
+    var id = Utilities.getUuid();
+    var dateIso = new Date().toISOString();
+    sheet.appendRow([id, dateIso, user, action_type, source_id || '', POINTS_PER_ACTION]);
+    return { amount: POINTS_PER_ACTION, awarded: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // --- Entry Points ---
 
 function doGet(e) {
