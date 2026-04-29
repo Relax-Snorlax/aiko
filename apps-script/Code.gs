@@ -12,6 +12,28 @@ var EDITABLE_SHEETS = {
   'Timeline': ['date', 'title', 'description']
 };
 
+// Returns the sheet by name. Creates it (with the given header row) if missing.
+// Uses script lock so two simultaneous callers can't both create the same sheet.
+function ensureSheet(name, headers) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(name);
+  if (sheet) return sheet;
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    sheet = ss.getSheetByName(name);
+    if (sheet) return sheet;
+    sheet = ss.insertSheet(name);
+    if (headers && headers.length) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+    return sheet;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // --- Entry Points ---
 
 function doGet(e) {
