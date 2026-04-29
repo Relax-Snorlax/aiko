@@ -14,7 +14,8 @@
     AUTHOR_COOKIE: 'ren-aiko-author',
     USER_COOKIE: 'ren-aiko-user',
     FEATURE_LAUNCH: '2026-04-29T00:00:00Z',
-    GLOW_DAYS: 14
+    GLOW_DAYS: 14,
+    SEEN_ANNOUNCE_COOKIE: 'ren-aiko-seen-rate-points'
   };
 
   // ============================================
@@ -52,6 +53,10 @@
     var div = document.createElement('div');
     div.textContent = s;
     return div.innerHTML;
+  }
+
+  function markAnnouncementSeen() {
+    setCookie(CONFIG.SEEN_ANNOUNCE_COOKIE, '1', 3650);
   }
 
   // ============================================
