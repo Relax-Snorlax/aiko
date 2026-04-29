@@ -33,6 +33,7 @@
       <nav class="header-nav">
         <a href="#posts-section" class="nav-link active" data-section="posts-section">Posts</a>
         <a href="#timeline-section" class="nav-link" data-section="timeline-section">Timeline</a>
+        <a href="#feedback-section" class="nav-link" data-section="feedback-section">Feedback</a>
         <a href="#archive-section" class="nav-link" data-section="archive-section">Archive</a>
       </nav>
       <button id="nav-toggle" class="nav-toggle">&#9776;</button>
@@ -92,6 +93,18 @@
       <div id="timeline-loading" class="loader">Loading timeline...</div>
       <p id="timeline-empty" class="empty-msg hidden">No milestones yet.</p>
       <p id="timeline-error" class="error-msg hidden"></p>
+    </section>
+
+    <!-- Feedback -->
+    <section id="feedback-section" class="section hidden">
+      <div class="section-top">
+        <h2 class="section-title">Feedback</h2>
+        <button id="new-feedback-btn" class="action-btn">+ Rate Your Partner</button>
+      </div>
+      <div id="feedback-feed"></div>
+      <div id="feedback-loading" class="loader">Loading feedback...</div>
+      <p id="feedback-empty" class="empty-msg hidden">No ratings yet. Be the first to leave one!</p>
+      <p id="feedback-error" class="error-msg hidden"></p>
     </section>
 
     <!-- Archive -->
@@ -249,6 +262,33 @@
         <p id="chat-form-error" class="error-msg hidden"></p>
         <button type="button" class="form-delete hidden" id="chat-delete-btn">Delete</button>
         <button type="submit" class="form-submit" id="chat-submit">Save Chat</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div id="feedback-modal" class="modal hidden">
+    <div class="modal-bg"></div>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Rate Your Partner</h3>
+        <button class="modal-x" data-close="feedback-modal">&times;</button>
+      </div>
+      <form id="feedback-form">
+        <p id="feedback-target-label" class="form-label" style="margin-bottom: 12px;">Rating: <strong id="feedback-target-name">your partner</strong></p>
+        <label class="form-label">Hearts</label>
+        <div id="heart-picker" class="heart-picker" data-value="0">
+          <button type="button" class="heart-btn" data-h="1">&#9825;</button>
+          <button type="button" class="heart-btn" data-h="2">&#9825;</button>
+          <button type="button" class="heart-btn" data-h="3">&#9825;</button>
+          <button type="button" class="heart-btn" data-h="4">&#9825;</button>
+          <button type="button" class="heart-btn" data-h="5">&#9825;</button>
+        </div>
+        <label class="form-label">Comment <span class="optional">(optional)</span>
+          <textarea id="feedback-comment" class="form-input form-textarea" rows="3"></textarea>
+        </label>
+        <button type="button" class="form-delete hidden" id="feedback-delete-btn">Delete</button>
+        <button type="submit" class="form-submit" id="feedback-submit">Send</button>
       </form>
     </div>
   </div>
