@@ -997,3 +997,215 @@ select.form-input { appearance: none; cursor: pointer; }
   border-color: #e85d75;
 }
 
+/* ============================================
+   Feedback
+   ============================================ */
+.feedback-card {
+  position: relative;
+  background: var(--surface, #15151c);
+  border: 1px solid var(--border, #2a2a3a);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.fb-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  opacity: 0.75;
+  margin-bottom: 6px;
+}
+.fb-author { font-weight: 600; }
+.fb-hearts {
+  font-size: 22px;
+  color: #ff7a8c;
+  letter-spacing: 2px;
+  margin: 4px 0 8px;
+}
+.fb-comment {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* Heart picker (modal) */
+.heart-picker {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 14px;
+}
+.heart-btn {
+  background: transparent;
+  border: 1px solid #2a2a3a;
+  color: #5a5a66;
+  font-size: 28px;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, transform 0.08s;
+}
+.heart-btn:hover { transform: translateY(-1px); }
+.heart-btn.filled {
+  color: #ff7a8c;
+  border-color: #ff7a8c;
+}
+
+/* "New feature" glow on action buttons */
+.action-btn.glow-new {
+  position: relative;
+  animation: glowNew 2.4s ease-in-out infinite;
+}
+@keyframes glowNew {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(255,122,140,0.5),
+      0 0 8px rgba(255,179,71,0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(255,122,140,0),
+      0 0 18px rgba(255,179,71,0.6),
+      0 0 28px rgba(255,122,140,0.4);
+  }
+}
+
+/* ============================================
+   Stats footer
+   ============================================ */
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 32px 16px 24px;
+}
+.stats-footer {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.stats-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
+  gap: 6px;
+}
+.stats-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: #1b1b20;
+}
+.stats-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.stats-name { font-weight: 600; font-size: 15px; }
+.stats-points {
+  font-size: 13px;
+  color: #ffb347;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.stats-rating {
+  font-size: 13px;
+  opacity: 0.78;
+}
+.footer-tagline {
+  font-size: 12px;
+  opacity: 0.7;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .stats-footer { flex-direction: column; gap: 18px; }
+}
+
+/* ============================================
+   Avatar tiers (manga aura / energy)
+   ============================================ */
+.tier-0 {
+  box-shadow: 0 0 0 2px #1b1b20, 0 0 0 3px #2a2a3a;
+}
+.tier-1 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #d96b7c,
+    0 0 8px rgba(217,107,124,0.35);
+}
+.tier-2 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #d96b7c,
+    0 0 14px rgba(217,107,124,0.5);
+}
+.tier-3 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #d96b7c,
+    0 0 20px rgba(217,107,124,0.65),
+    0 0 0 7px rgba(255,179,71,0.5);
+}
+.tier-4 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 7px #d96b7c,
+    0 0 22px rgba(217,107,124,0.7);
+}
+.tier-5 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 7px #d96b7c,
+    0 0 26px rgba(255,179,71,0.65),
+    0 0 44px rgba(217,107,124,0.4);
+  animation: tierBreathe 3.6s ease-in-out infinite;
+}
+.tier-6 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 7px #d96b7c,
+    0 0 0 10px rgba(255,179,71,0.5),
+    0 0 30px rgba(255,179,71,0.7),
+    0 0 56px rgba(217,107,124,0.5);
+  animation: tierBreathe 3.2s ease-in-out infinite;
+}
+.tier-7 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 7px #d96b7c,
+    0 0 0 11px #ffb347,
+    0 0 36px rgba(255,179,71,0.85),
+    0 0 72px rgba(217,107,124,0.55);
+  animation: tierBreathe 2.8s ease-in-out infinite;
+}
+.tier-8 {
+  box-shadow:
+    0 0 0 2px #1b1b20,
+    0 0 0 4px #ffb347,
+    0 0 0 8px #d96b7c,
+    0 0 0 12px #ffb347,
+    0 0 44px rgba(255,179,71,0.95),
+    0 0 80px rgba(217,107,124,0.7);
+  animation: tierMax 3s linear infinite;
+}
+
+@keyframes tierBreathe {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.18); }
+}
+@keyframes tierMax {
+  0%   { filter: brightness(1)    hue-rotate(0deg); }
+  50%  { filter: brightness(1.22) hue-rotate(20deg); }
+  100% { filter: brightness(1)    hue-rotate(0deg); }
+}

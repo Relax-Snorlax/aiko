@@ -9,8 +9,76 @@ var DRIVE_FOLDER_ID = 'YOUR_FOLDER_ID_HERE';
 var EDITABLE_SHEETS = {
   'Posts':    ['author', 'title', 'body', 'image_url', 'type'],
   'Chats':    ['author', 'chat_text', 'image_urls', 'chat_when', 'notes'],
-  'Timeline': ['date', 'title', 'description']
+  'Timeline': ['date', 'title', 'description'],
+  'Feedback': ['hearts', 'comment']
 };
+
+// Returns the sheet by name. Creates it (with the given header row) if missing.
+// Uses script lock so two simultaneous callers can't both create the same sheet.
+function ensureSheet(name, headers) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(name);
+  if (sheet) return sheet;
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    sheet = ss.getSheetByName(name);
+    if (sheet) return sheet;
+    sheet = ss.insertSheet(name);
+    if (headers && headers.length) {
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+    return sheet;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+var POINTS_HEADERS = ['id', 'date', 'user', 'action_type', 'source_id', 'amount'];
+var FEEDBACK_HEADERS = ['id', 'date', 'author', 'target', 'hearts', 'comment'];
+var COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 hours
+var POINTS_PER_ACTION = 5;
+var VALID_USERS = ['Brian', 'Linh'];
+
+function isValidUser(u) {
+  return VALID_USERS.indexOf(u) >= 0;
+}
+
+function awardPointsIfEligible(user, action_type, source_id) {
+  if (!isValidUser(user)) return null;
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    var sheet = ensureSheet('Points', POINTS_HEADERS);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var userCol = headers.indexOf('user');
+    var actionCol = headers.indexOf('action_type');
+    var dateCol = headers.indexOf('date');
+
+    var now = Date.now();
+    var mostRecent = 0;
+    for (var r = 1; r < data.length; r++) {
+      if (data[r][userCol] === user && data[r][actionCol] === action_type) {
+        var ts = new Date(data[r][dateCol]).getTime();
+        if (!isNaN(ts) && ts > mostRecent) mostRecent = ts;
+      }
+    }
+
+    if (mostRecent && (now - mostRecent) < COOLDOWN_MS) {
+      return null; // on cooldown
+    }
+
+    var id = Utilities.getUuid();
+    var dateIso = new Date().toISOString();
+    sheet.appendRow([id, dateIso, user, action_type, source_id || '', POINTS_PER_ACTION]);
+    return { amount: POINTS_PER_ACTION, awarded: true };
+  } finally {
+    lock.releaseLock();
+  }
+}
 
 // --- Entry Points ---
 
@@ -22,6 +90,8 @@ function doGet(e) {
       case 'getTimeline':   return respond(getTimeline());
       case 'getCountdown':  return respond(getCountdown());
       case 'getChats':      return respond(getChats());
+      case 'getFeedback':   return respond(getFeedback());
+      case 'getStats':      return respond(getStats());
       default:              return respond({ error: 'Unknown action: ' + action });
     }
   } catch (err) {
@@ -38,6 +108,7 @@ function doPost(e) {
       case 'addTimeline':      result = addTimeline(e.parameter); break;
       case 'updateCountdown':  result = updateCountdown(e.parameter); break;
       case 'addChat':          result = addChat(e.parameter); break;
+      case 'addFeedback':      result = addFeedback(e.parameter); break;
       case 'editEntry':        result = editEntry(e.parameter); break;
       case 'deleteEntry':      result = deleteEntry(e.parameter); break;
       case 'logLogin':         result = logLogin(e.parameter); break;
@@ -163,14 +234,20 @@ function addPost(params) {
     id, date, params.author || '', params.title || '',
     params.body || '', imageUrl, params.type || 'post'
   ]);
-  return { success: true, id: id, date: date, image_url: imageUrl };
+
+  var award = awardPointsIfEligible(params.user, 'post', id);
+  return {
+    success: true, id: id, date: date, image_url: imageUrl,
+    points_awarded: award ? award.amount : 0
+  };
 }
 
 function addTimeline(params) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Timeline');
   var id = Utilities.getUuid();
   sheet.appendRow([id, params.date, params.title, params.description || '']);
-  return { success: true, id: id };
+  var award = awardPointsIfEligible(params.user, 'timeline', id);
+  return { success: true, id: id, points_awarded: award ? award.amount : 0 };
 }
 
 function updateCountdown(params) {
@@ -245,7 +322,97 @@ function addChat(params) {
 
   var savedDate = new Date().toISOString();
   sheet.appendRow([id, savedDate, author, chatText, imageUrls, chatWhen, notes]);
-  return { success: true, id: id, saved_date: savedDate, image_urls: imageUrls };
+  var award = awardPointsIfEligible(params.user, 'chat', id);
+  return {
+    success: true, id: id, saved_date: savedDate, image_urls: imageUrls,
+    points_awarded: award ? award.amount : 0
+  };
+}
+
+function addFeedback(params) {
+  var user = params.user;
+  if (!isValidUser(user)) return { error: 'Unknown user' };
+
+  var hearts = parseInt(params.hearts, 10);
+  if (isNaN(hearts) || hearts < 0 || hearts > 5) {
+    return { error: 'Hearts must be 0-5' };
+  }
+  var comment = params.comment || '';
+  var target = (user === 'Brian') ? 'Linh' : 'Brian';
+
+  var sheet = ensureSheet('Feedback', FEEDBACK_HEADERS);
+  var id = Utilities.getUuid();
+  var date = new Date().toISOString();
+  sheet.appendRow([id, date, user, target, hearts, comment]);
+
+  var award = awardPointsIfEligible(user, 'feedback', id);
+  return {
+    success: true, id: id, date: date, target: target,
+    points_awarded: award ? award.amount : 0
+  };
+}
+
+function getFeedback() {
+  var sheet = ensureSheet('Feedback', FEEDBACK_HEADERS);
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  var headers = data[0];
+  return data.slice(1).map(function (row) {
+    var obj = {};
+    headers.forEach(function (h, i) {
+      obj[h] = row[i] instanceof Date ? row[i].toISOString() : row[i];
+    });
+    return obj;
+  });
+}
+
+function getStats() {
+  var pointsSheet = ensureSheet('Points', POINTS_HEADERS);
+  var feedbackSheet = ensureSheet('Feedback', FEEDBACK_HEADERS);
+
+  var stats = {};
+  VALID_USERS.forEach(function (u) {
+    stats[u] = { points: 0, avg_hearts: 0, count: 0 };
+  });
+
+  // Sum points
+  var pData = pointsSheet.getDataRange().getValues();
+  if (pData.length > 1) {
+    var pHeaders = pData[0];
+    var uCol = pHeaders.indexOf('user');
+    var aCol = pHeaders.indexOf('amount');
+    for (var r = 1; r < pData.length; r++) {
+      var u = pData[r][uCol];
+      var amt = parseInt(pData[r][aCol], 10) || 0;
+      if (stats[u]) stats[u].points += amt;
+    }
+  }
+
+  // Average hearts (by target)
+  var fData = feedbackSheet.getDataRange().getValues();
+  if (fData.length > 1) {
+    var fHeaders = fData[0];
+    var tCol = fHeaders.indexOf('target');
+    var hCol = fHeaders.indexOf('hearts');
+    var totals = {};
+    VALID_USERS.forEach(function (u) { totals[u] = { sum: 0, n: 0 }; });
+    for (var r = 1; r < fData.length; r++) {
+      var t = fData[r][tCol];
+      var h = parseInt(fData[r][hCol], 10);
+      if (totals[t] && !isNaN(h)) {
+        totals[t].sum += h;
+        totals[t].n += 1;
+      }
+    }
+    VALID_USERS.forEach(function (u) {
+      stats[u].count = totals[u].n;
+      stats[u].avg_hearts = totals[u].n
+        ? Math.round((totals[u].sum / totals[u].n) * 10) / 10
+        : 0;
+    });
+  }
+
+  return stats;
 }
 
 function editEntry(params) {
@@ -294,7 +461,13 @@ function editEntry(params) {
     if (params[field] === undefined) return;
     var colIndex = headers.indexOf(field);
     if (colIndex < 0) return;
-    sheet.getRange(rowIndex + 1, colIndex + 1).setValue(params[field]);
+    var value = params[field];
+    if (sheetName === 'Feedback' && field === 'hearts') {
+      var h = parseInt(value, 10);
+      if (isNaN(h) || h < 0 || h > 5) return; // skip invalid hearts edit
+      value = h;
+    }
+    sheet.getRange(rowIndex + 1, colIndex + 1).setValue(value);
   });
 
   // Apply computed image URL AFTER allowlist so fresh uploads win.
