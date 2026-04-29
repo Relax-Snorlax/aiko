@@ -230,14 +230,20 @@ function addPost(params) {
     id, date, params.author || '', params.title || '',
     params.body || '', imageUrl, params.type || 'post'
   ]);
-  return { success: true, id: id, date: date, image_url: imageUrl };
+
+  var award = awardPointsIfEligible(params.user, 'post', id);
+  return {
+    success: true, id: id, date: date, image_url: imageUrl,
+    points_awarded: award ? award.amount : 0
+  };
 }
 
 function addTimeline(params) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Timeline');
   var id = Utilities.getUuid();
   sheet.appendRow([id, params.date, params.title, params.description || '']);
-  return { success: true, id: id };
+  var award = awardPointsIfEligible(params.user, 'timeline', id);
+  return { success: true, id: id, points_awarded: award ? award.amount : 0 };
 }
 
 function updateCountdown(params) {
@@ -312,7 +318,11 @@ function addChat(params) {
 
   var savedDate = new Date().toISOString();
   sheet.appendRow([id, savedDate, author, chatText, imageUrls, chatWhen, notes]);
-  return { success: true, id: id, saved_date: savedDate, image_urls: imageUrls };
+  var award = awardPointsIfEligible(params.user, 'chat', id);
+  return {
+    success: true, id: id, saved_date: savedDate, image_urls: imageUrls,
+    points_awarded: award ? award.amount : 0
+  };
 }
 
 function editEntry(params) {
