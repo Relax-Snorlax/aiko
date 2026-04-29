@@ -363,6 +363,55 @@ function getFeedback() {
   });
 }
 
+function getStats() {
+  var pointsSheet = ensureSheet('Points', POINTS_HEADERS);
+  var feedbackSheet = ensureSheet('Feedback', FEEDBACK_HEADERS);
+
+  var stats = {};
+  VALID_USERS.forEach(function (u) {
+    stats[u] = { points: 0, avg_hearts: 0, count: 0 };
+  });
+
+  // Sum points
+  var pData = pointsSheet.getDataRange().getValues();
+  if (pData.length > 1) {
+    var pHeaders = pData[0];
+    var uCol = pHeaders.indexOf('user');
+    var aCol = pHeaders.indexOf('amount');
+    for (var r = 1; r < pData.length; r++) {
+      var u = pData[r][uCol];
+      var amt = parseInt(pData[r][aCol], 10) || 0;
+      if (stats[u]) stats[u].points += amt;
+    }
+  }
+
+  // Average hearts (by target)
+  var fData = feedbackSheet.getDataRange().getValues();
+  if (fData.length > 1) {
+    var fHeaders = fData[0];
+    var tCol = fHeaders.indexOf('target');
+    var hCol = fHeaders.indexOf('hearts');
+    var totals = {};
+    VALID_USERS.forEach(function (u) { totals[u] = { sum: 0, n: 0 }; });
+    for (var r = 1; r < fData.length; r++) {
+      var t = fData[r][tCol];
+      var h = parseInt(fData[r][hCol], 10);
+      if (totals[t] && !isNaN(h)) {
+        totals[t].sum += h;
+        totals[t].n += 1;
+      }
+    }
+    VALID_USERS.forEach(function (u) {
+      stats[u].count = totals[u].n;
+      stats[u].avg_hearts = totals[u].n
+        ? Math.round((totals[u].sum / totals[u].n) * 10) / 10
+        : 0;
+    });
+  }
+
+  return stats;
+}
+
 function editEntry(params) {
   var sheetName = params.sheet;
   var id = params.id;
