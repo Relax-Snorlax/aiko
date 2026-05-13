@@ -13,8 +13,6 @@
     AUTH_COOKIE: 'ren-aiko-auth',
     AUTHOR_COOKIE: 'ren-aiko-author',
     USER_COOKIE: 'ren-aiko-user',
-    FEATURE_LAUNCH: '2026-04-29T00:00:00Z',
-    GLOW_DAYS: 14,
     SEEN_ANNOUNCE_COOKIE: 'ren-aiko-seen-rate-points'
   };
 
@@ -1180,16 +1178,6 @@
       .catch(function () { /* silent — stats footer keeps placeholder values */ });
   }
 
-  function initFeatureGlow() {
-    try {
-      var launch = new Date(CONFIG.FEATURE_LAUNCH).getTime();
-      var elapsedDays = (Date.now() - launch) / 86400000;
-      if (elapsedDays >= 0 && elapsedDays < CONFIG.GLOW_DAYS) {
-        var btn = $('new-feedback-btn');
-        if (btn) btn.classList.add('glow-new');
-      }
-    } catch (e) { /* ignore */ }
-  }
 
   // ============================================
   // Modals
@@ -1378,7 +1366,6 @@
     initFeedbackForm();
     initLightbox();
     initEditDelegate();
-    initFeatureGlow();
     initLogoutButtons();
     initAnnouncement();
 

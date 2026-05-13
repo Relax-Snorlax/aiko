@@ -1050,24 +1050,6 @@ select.form-input { appearance: none; cursor: pointer; }
   border-color: #ff7a8c;
 }
 
-/* "New feature" glow on action buttons */
-.action-btn.glow-new {
-  position: relative;
-  animation: glowNew 2.4s ease-in-out infinite;
-}
-@keyframes glowNew {
-  0%, 100% {
-    box-shadow:
-      0 0 0 0 rgba(255,122,140,0.5),
-      0 0 8px rgba(255,179,71,0.3);
-  }
-  50% {
-    box-shadow:
-      0 0 0 6px rgba(255,122,140,0),
-      0 0 18px rgba(255,179,71,0.6),
-      0 0 28px rgba(255,122,140,0.4);
-  }
-}
 
 /* ============================================
    Stats footer
