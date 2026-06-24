@@ -14,7 +14,7 @@ These apply to **every** task:
 
 - **Node ≥ 18** required for `node --test` (dev has v22). Tests live in `test/`, named `*.test.js`.
 - **`package.json` has `"type": "module"`** so `.js` files under `js/` and `test/` are ES modules in Node. The browser loads them via `<script type="module">`. `app.js` stays a classic browser script (Node never runs it).
-- **Pin the globe.gl version** in the import URL: `https://esm.sh/globe.gl@2.33.0`. Do not use an unpinned/`latest` URL.
+- **Pin the globe.gl version** in the import URL: `https://esm.sh/globe.gl@2.46.1` (verified to resolve `200` on esm.sh; latest as of 2026-06-24). Do not use an unpinned/`latest` URL. Task 7 spikes it before relying on it.
 - **Vendor all geometry/city data into `data/`** — committed JSON/SVG. Only the globe.gl library loads from a CDN at runtime.
 - **Testing strategy (deliberate):** automated unit tests only for the **pure** modules (`places-model.js`, `place-lookup.js`) and **data-shape** checks. Browser-rendering modules (`globe-view.js`, `us-inset.js`, `our-world.js`), CSS, and the Apps Script backend get **manual verification steps** — no DOM/E2E framework is added (would violate the site's lean, dependency-light ethos). This was approved in the spec.
 - **Section name is "Our World".** Region codes: US states = `US-XX` (USPS), countries = ISO-3166 alpha-2 (e.g. `FR`); the USA country itself is `US`.
@@ -501,7 +501,7 @@ Expected: FAIL — module not found.
 export function normalizeName(s) {
   return String(s || '')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/\p{Diacritic}/gu, '') // strip combining diacritics (Unicode property; copy-safe)
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
@@ -911,12 +911,43 @@ Claude-Session: https://claude.ai/code/session_01FiqVeRZgwkgUixGcH2gFap"
 - Consumes: globe.gl (pinned ESM CDN); a `countries` GeoJSON FeatureCollection (features have `properties.code`).
 - Produces: `createGlobeView(container, opts) -> { refresh(), focusUS(), resize(), destroy() }` where `opts = { countries, getVisited:()=>Set, getDestinations:()=>place[], onRegionClick:(code)=>void, onPinClick:(place)=>void }`.
 
-- [ ] **Step 1: Write `js/globe-view.js`**
+- [ ] **Step 1: Spike — verify globe.gl resolves and its API matches**
+
+Before writing the module (everything visual depends on these accessors),
+confirm the pinned library loads and behaves as assumed. Create a throwaway
+`globe-spike.html` at repo root:
+
+```html
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:#0a0a0f}#g{width:100vw;height:100vh}</style></head>
+<body><div id="g"></div><script type="module">
+import Globe from 'https://esm.sh/globe.gl@2.46.1';
+const countries = await fetch('data/countries-110m.geojson').then(r=>r.json());
+const w = Globe()(document.getElementById('g'))
+  .backgroundColor('#0a0a0f')
+  .polygonsData(countries.features)
+  .polygonCapColor(()=> 'rgba(245,230,211,0.3)')
+  .onPolygonClick(f=>console.log('click', f.properties.code))
+  .htmlElementsData([{lat:48.85,lng:2.35}])
+  .htmlLat(d=>d.lat).htmlLng(d=>d.lng)
+  .htmlElement(()=>{const e=document.createElement('div');e.textContent='📍';return e;});
+console.log('controls?', typeof w.controls === 'function');
+</script></body></html>
+```
+
+Serve (`python3 -m http.server 8099 --bind 0.0.0.0`) and open
+`http://pc-bp3-wsl:8099/globe-spike.html`. Confirm, before proceeding: **no
+import/network error** (the pinned version resolves), countries render, clicking
+a country logs its code, the 📍 pin appears, and the console logs `controls? true`.
+If any accessor is renamed/missing in this version, adjust the next step's code to
+match. Then **delete `globe-spike.html`**.
+
+- [ ] **Step 2: Write `js/globe-view.js`**
 
 ```js
 // Themed globe.gl globe: clickable country polygons (glow when unvisited),
 // destination pins, gentle auto-rotate. Browser-only (imports globe.gl).
-import Globe from 'https://esm.sh/globe.gl@2.33.0';
+import Globe from 'https://esm.sh/globe.gl@2.46.1';
 
 const THEME = {
   bg: '#0a0a0f',
@@ -960,7 +991,7 @@ export function createGlobeView(container, opts) {
     .polygonCapColor(capColor)
     .polygonSideColor(() => 'rgba(199,130,175,0.06)')
     .polygonStrokeColor(() => THEME.stroke)
-    .polygonsTransitionDuration(300)
+    .polygonsTransitionDuration(0) // 0: the glow re-applies cap colors ~12fps; a tween here would never finish and the pulse would look laggy/flat
     .onPolygonClick(f => onRegionClick(codeOf(f)))
     .htmlElementsData(getDestinations())
     .htmlLat(d => d.lat)
@@ -1004,7 +1035,7 @@ export function createGlobeView(container, opts) {
 }
 ```
 
-- [ ] **Step 2: Manual smoke check (standalone)**
+- [ ] **Step 3: Manual smoke check (standalone)**
 
 Create a throwaway `globe-test.html` at repo root (delete after):
 
@@ -1024,7 +1055,7 @@ createGlobeView(document.getElementById('g'), {
 
 Serve (`python3 -m http.server 8099 --bind 0.0.0.0`), open `http://pc-bp3-wsl:8099/globe-test.html`. Verify: a dark globe with rose atmosphere auto-rotates; France/Japan render solid mauve, others glow/pulse cream; clicking a country logs its code; a pin shows near Paris and logs on click. Then **delete `globe-test.html`**.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add js/globe-view.js
@@ -1145,6 +1176,24 @@ let booted = false;
 const visited = () => model.visitedRegionSet(places);
 const destinations = () => model.destinationPlaces(places);
 
+// Sheets returns numbers as strings; coerce destination lat/lng so globe.gl's
+// sphere math (htmlLat/htmlLng) gets real numbers, not NaN, after a refetch.
+function normalizePlaces(rows) {
+  return (Array.isArray(rows) ? rows : []).map(p => {
+    if (p && p.kind === 'destination') {
+      return Object.assign({}, p, { lat: Number(p.lat), lng: Number(p.lng) });
+    }
+    return p;
+  });
+}
+
+async function fetchPlaces() {
+  const a = API();
+  if (!a) return places;
+  const rows = await a.apiGet('getPlaces').catch(() => null);
+  return rows ? normalizePlaces(rows) : places;
+}
+
 async function boot() {
   if (booted) return;
   booted = true;
@@ -1155,7 +1204,7 @@ async function boot() {
     fetch('data/cities.json').then(r => r.json()).catch(() => []),
     fetch('data/countries-110m.geojson').then(r => r.json()).catch(() => null)
   ]);
-  places = Array.isArray(placesData) ? placesData : [];
+  places = normalizePlaces(placesData);
   cities = citiesData || [];
   countries = countriesData;
 
@@ -1209,7 +1258,7 @@ async function onRegionToggle(code) {
       await a.apiPost({ action: 'deleteEntry', sheet: 'Places', id: act.id });
     }
   } catch (e) { /* reconcile below */ }
-  places = await a.apiGet('getPlaces').catch(() => places);
+  places = await fetchPlaces();
   refreshAll();
 }
 
@@ -1288,7 +1337,7 @@ function initAddDestination() {
           name: hit.name, lat: hit.lat, lng: hit.lng, status: 'wish', user
         });
       } catch (e2) { /* reconcile below */ }
-      places = await a.apiGet('getPlaces').catch(() => places);
+      places = await fetchPlaces();
       refreshAll();
       a.closeModal('ow-dest-modal');
     }
