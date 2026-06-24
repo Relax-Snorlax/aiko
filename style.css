@@ -1249,3 +1249,142 @@ select.form-input { appearance: none; cursor: pointer; }
   padding: 0 4px;
   vertical-align: baseline;
 }
+
+/* ===========================
+   Our World — globe + visited-places map
+   The celestial centerpiece: a glowing world the couple "claims" together.
+   =========================== */
+
+/* Progress readout — a keepsake line in the gate-title gradient */
+.ow-progress {
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 2px 0 16px;
+  background: linear-gradient(135deg, #f5e6d3, #c782af);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.ow-controls { margin-bottom: 14px; }
+
+/* Drill-in toggle — a soft pill that lifts on hover */
+.ow-toggle {
+  background: rgba(199, 130, 175, 0.10);
+  border: 1px solid #2a1f3d;
+  color: #e8e4df;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+.ow-toggle:hover {
+  background: rgba(199, 130, 175, 0.20);
+  border-color: #c782af;
+  box-shadow: 0 0 20px rgba(199, 130, 175, 0.25);
+}
+.ow-toggle:active { transform: translateY(1px); }
+
+/* Stage shared by the globe and the US inset — atmosphere + depth, not a flat box */
+.globe-wrap,
+.us-inset {
+  position: relative;
+  width: 100%;
+  border: 1px solid #2a1f3d;
+  border-radius: 20px;
+  overflow: hidden;
+  /* layered: faint cream "stars", a mauve aurora at the top, deep space below */
+  background:
+    radial-gradient(1px 1px at 20% 30%, rgba(245, 230, 211, 0.20), transparent 60%),
+    radial-gradient(1px 1px at 68% 18%, rgba(245, 230, 211, 0.16), transparent 60%),
+    radial-gradient(1px 1px at 82% 64%, rgba(245, 230, 211, 0.14), transparent 60%),
+    radial-gradient(1px 1px at 38% 78%, rgba(245, 230, 211, 0.12), transparent 60%),
+    radial-gradient(130% 120% at 50% -10%, rgba(199, 130, 175, 0.16), transparent 55%),
+    #07070b;
+  box-shadow:
+    0 0 60px rgba(199, 130, 175, 0.14),
+    inset 0 0 80px rgba(0, 0, 0, 0.55);
+}
+
+.globe-canvas {
+  width: 100%;
+  height: 60vh;
+  min-height: 360px;
+  cursor: grab;
+}
+.globe-canvas:active { cursor: grabbing; }
+
+/* US drill-in map */
+.us-inset { padding: 22px; }
+.us-map { width: 100%; height: auto; display: block; }
+.us-map path {
+  stroke: #0a0a0f;
+  stroke-width: 0.75;
+  cursor: pointer;
+  transition: fill 0.25s ease, filter 0.25s ease;
+}
+/* Unvisited: a place still waiting for us — it breathes a cream glow */
+.us-map path.unvisited {
+  fill: rgba(199, 130, 175, 0.13);
+  animation: owGlow 3s ease-in-out infinite;
+}
+.us-map path:hover {
+  fill: rgba(245, 230, 211, 0.55);
+  filter: drop-shadow(0 0 8px rgba(245, 230, 211, 0.7));
+}
+/* Visited: claimed — solid mauve with a steady halo, no more pull to click */
+.us-map path.visited {
+  fill: #c782af;
+  stroke: rgba(245, 230, 211, 0.5);
+  filter: drop-shadow(0 0 6px rgba(199, 130, 175, 0.65));
+  animation: none;
+}
+
+@keyframes owGlow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(245, 230, 211, 0.18)); }
+  50%      { filter: drop-shadow(0 0 8px rgba(245, 230, 211, 0.55)); }
+}
+
+/* Destination pins (globe.gl htmlElements) */
+.globe-pin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition: transform 0.15s ease;
+}
+/* Wishlist: a hollow beacon that pulses, asking to be reached */
+.globe-pin.wish {
+  background: transparent;
+  border: 2px solid #f5e6d3;
+  box-shadow: 0 0 8px rgba(245, 230, 211, 0.7);
+  animation: owPinPulse 2.2s ease-in-out infinite;
+}
+/* Visited: a filled, settled star */
+.globe-pin.visited {
+  background: #c782af;
+  border: 2px solid #f5e6d3;
+  box-shadow: 0 0 12px rgba(199, 130, 175, 0.9);
+}
+.globe-pin:hover { transform: translate(-50%, -50%) scale(1.4); }
+
+@keyframes owPinPulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(245, 230, 211, 0.55); }
+  50%      { box-shadow: 0 0 16px rgba(245, 230, 211, 0.95); }
+}
+
+/* Add-destination hint + globe load fallback */
+.form-hint { font-size: 12px; color: #c782af; min-height: 16px; margin: 4px 0 8px; }
+.ow-fallback { padding: 36px; text-align: center; color: #b8b0a8; line-height: 1.7; }
+
+@media (max-width: 600px) {
+  .globe-canvas { height: 52vh; min-height: 300px; }
+  .us-inset { padding: 14px; }
+  .ow-progress { font-size: 12px; letter-spacing: 1px; }
+}

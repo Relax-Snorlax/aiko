@@ -3,14 +3,17 @@
 // Deploy: Extensions > Apps Script from the Google Sheet
 // ============================================
 
-// Replace with your Google Drive folder ID for image uploads
-var DRIVE_FOLDER_ID = 'YOUR_FOLDER_ID_HERE';
+// DRIVE_FOLDER_ID is read from Apps Script Script Properties so it's not
+// committed to source. To set it: Apps Script editor > Project Settings >
+// Script Properties > add `DRIVE_FOLDER_ID` = your Google Drive folder ID.
+var DRIVE_FOLDER_ID = PropertiesService.getScriptProperties().getProperty('DRIVE_FOLDER_ID') || '';
 
 var EDITABLE_SHEETS = {
   'Posts':    ['author', 'title', 'body', 'image_url', 'type'],
   'Chats':    ['author', 'chat_text', 'image_urls', 'chat_when', 'notes'],
   'Timeline': ['date', 'title', 'description'],
-  'Feedback': ['hearts', 'comment']
+  'Feedback': ['hearts', 'comment'],
+  'Places':   ['kind', 'code', 'name', 'lat', 'lng', 'status', 'added_by', 'notes']
 };
 
 // Returns the sheet by name. Creates it (with the given header row) if missing.
@@ -37,6 +40,7 @@ function ensureSheet(name, headers) {
 
 var POINTS_HEADERS = ['id', 'date', 'user', 'action_type', 'source_id', 'amount'];
 var FEEDBACK_HEADERS = ['id', 'date', 'author', 'target', 'hearts', 'comment'];
+var PLACES_HEADERS = ['id', 'date', 'kind', 'code', 'name', 'lat', 'lng', 'status', 'added_by', 'notes'];
 var COOLDOWN_MS = 3 * 60 * 60 * 1000; // 3 hours
 var POINTS_PER_ACTION = 5;
 var VALID_USERS = ['Brian', 'Linh'];
@@ -92,6 +96,7 @@ function doGet(e) {
       case 'getChats':      return respond(getChats());
       case 'getFeedback':   return respond(getFeedback());
       case 'getStats':      return respond(getStats());
+      case 'getPlaces':     return respond(getPlaces());
       default:              return respond({ error: 'Unknown action: ' + action });
     }
   } catch (err) {
@@ -109,6 +114,7 @@ function doPost(e) {
       case 'updateCountdown':  result = updateCountdown(e.parameter); break;
       case 'addChat':          result = addChat(e.parameter); break;
       case 'addFeedback':      result = addFeedback(e.parameter); break;
+      case 'addPlace':         result = addPlace(e.parameter); break;
       case 'editEntry':        result = editEntry(e.parameter); break;
       case 'deleteEntry':      result = deleteEntry(e.parameter); break;
       case 'logLogin':         result = logLogin(e.parameter); break;
@@ -366,6 +372,33 @@ function getFeedback() {
   });
 }
 
+function getPlaces() {
+  ensureSheet('Places', PLACES_HEADERS);
+  return sheetToObjects('Places');
+}
+
+function addPlace(params) {
+  var kind = params.kind;
+  if (kind !== 'region' && kind !== 'destination') {
+    return { error: 'Invalid kind' };
+  }
+  var sheet = ensureSheet('Places', PLACES_HEADERS);
+  var id = Utilities.getUuid();
+  var date = new Date().toISOString();
+  var status = params.status || (kind === 'region' ? 'visited' : 'wish');
+  sheet.appendRow([
+    id, date, kind,
+    params.code || '', params.name || '',
+    params.lat || '', params.lng || '',
+    status, params.user || '', params.notes || ''
+  ]);
+  // Points are for *visiting* a place (spec: Points Integration). A wishlist
+  // pin (status 'wish') isn't a visit, so it earns nothing; regions default to
+  // 'visited' and do earn (subject to the per-action_type cooldown).
+  var award = (status === 'visited') ? awardPointsIfEligible(params.user, 'place', id) : null;
+  return { success: true, id: id, date: date, points_awarded: award ? award.amount : 0 };
+}
+
 function getStats() {
   var pointsSheet = ensureSheet('Points', POINTS_HEADERS);
   var feedbackSheet = ensureSheet('Feedback', FEEDBACK_HEADERS);
@@ -525,6 +558,9 @@ function logLogin(params) {
 // --- Image Upload ---
 
 function uploadImage(base64Data, mimeType, filename) {
+  if (!DRIVE_FOLDER_ID) {
+    throw new Error('DRIVE_FOLDER_ID not set. Configure it in Apps Script > Project Settings > Script Properties.');
+  }
   var folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   var decoded = Utilities.base64Decode(base64Data);
   var ext = mimeType.split('/')[1] || 'jpg';

@@ -34,6 +34,7 @@
         <a href="#posts-section" class="nav-link active" data-section="posts-section">Posts</a>
         <a href="#timeline-section" class="nav-link" data-section="timeline-section">Timeline</a>
         <a href="#feedback-section" class="nav-link" data-section="feedback-section">Feedback</a>
+        <a href="#our-world-section" class="nav-link" data-section="our-world-section">Our World</a>
         <a href="#archive-section" class="nav-link" data-section="archive-section">Archive</a>
       </nav>
       <button id="logout-header" class="logout-link" type="button">Log out</button>
@@ -106,6 +107,22 @@
       <div id="feedback-loading" class="loader">Loading feedback...</div>
       <p id="feedback-empty" class="empty-msg hidden">No ratings yet. Be the first to leave one!</p>
       <p id="feedback-error" class="error-msg hidden"></p>
+    </section>
+
+    <!-- Our World -->
+    <section id="our-world-section" class="section hidden">
+      <div class="section-top">
+        <h2 class="section-title">Our World</h2>
+        <button id="ow-add-dest-btn" class="action-btn">+ Add Destination</button>
+      </div>
+      <p id="ow-progress" class="ow-progress">— / 50 states &middot; — / — countries</p>
+      <div class="ow-controls">
+        <button id="ow-toggle-us" class="ow-toggle" type="button">Zoom to US states</button>
+      </div>
+      <div id="globe-wrap" class="globe-wrap">
+        <div id="globe-canvas" class="globe-canvas"></div>
+      </div>
+      <div id="us-inset" class="us-inset hidden"></div>
     </section>
 
     <!-- Archive -->
@@ -317,6 +334,24 @@
     </div>
   </div>
 
+  <!-- Add Destination Modal -->
+  <div id="ow-dest-modal" class="modal hidden">
+    <div class="modal-bg"></div>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Add a Destination</h3>
+        <button class="modal-x" data-close="ow-dest-modal">&times;</button>
+      </div>
+      <form id="ow-dest-form">
+        <label class="form-label">Place name
+          <input type="text" id="ow-dest-name" class="form-input" placeholder="e.g. Paris, Banff, Tokyo" autocomplete="off" required>
+        </label>
+        <p id="ow-dest-status" class="form-hint"></p>
+        <button type="submit" class="form-submit">Add to map</button>
+      </form>
+    </div>
+  </div>
+
   <!-- Announcement Modal (one-time, Linh only) -->
   <div id="announce-modal" class="modal hidden">
     <div class="modal-bg"></div>
@@ -335,11 +370,29 @@
     </div>
   </div>
 
+  <!-- Globe Announcement Modal (one-time, Linh only) -->
+  <div id="announce-globe-modal" class="modal hidden">
+    <div class="modal-bg"></div>
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>New: Our World &#127757;</h3>
+        <button class="modal-x" data-close="announce-globe-modal">&times;</button>
+      </div>
+      <div class="announce-body">
+        <p>There's a new interactive globe in the dashboard.</p>
+        <p>&#128506;&#65039; <strong>Tap the places we've been</strong> &mdash; every country and all 50 US states. The ones we haven't reached yet will glow, waiting for us.</p>
+        <p>&#128205; <strong>Add dream destinations</strong> &mdash; type a place and it drops a pin on the map. Our bucket list: all 50 states and every country.</p>
+        <button type="button" class="form-submit" id="announce-globe-btn">Explore it &rarr;</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Lightbox -->
   <div id="lightbox" class="lightbox hidden">
     <img id="lightbox-img" alt="">
   </div>
 
   <script src="app.js"></script>
+  <script type="module" src="js/our-world.js"></script>
 </body>
 </html>

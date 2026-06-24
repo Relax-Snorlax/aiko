@@ -1,0 +1,17 @@
+{
+  "name": "ren-aiko-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "build:data": "node scripts/build-countries.mjs && node scripts/build-us-svg.mjs && node scripts/build-cities.mjs && node scripts/build-country-codes.mjs"
+  },
+  "devDependencies": {
+    "all-the-cities": "^3.1.0",
+    "d3-geo": "^3.1.1",
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1",
+    "world-atlas": "^2.0.2",
+    "world-countries": "^5.0.0"
+  }
+}
