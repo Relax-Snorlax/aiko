@@ -180,6 +180,11 @@ export function createGlobeView(container, opts) {
       world.polygonCapColor(capColor);
       world.htmlElementsData(getDestinations());
     },
+    // Region click only changes polygon colors — skip the pin (htmlElements)
+    // rebuild to keep the click path light.
+    recolor() {
+      world.polygonCapColor(capColor);
+    },
     focusUS() {
       world.pointOfView({ lat: 39.8, lng: -98.6, altitude: 1.6 }, 900);
     },

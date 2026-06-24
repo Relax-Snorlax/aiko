@@ -130,7 +130,7 @@ async function onRegionToggle(code) {
   } else {
     places = places.filter(p => p.id !== act.id);
   }
-  refreshAll();
+  refreshRegions(); // click path: colors only — pins/list didn't change
   try {
     if (!a) return;
     const user = a.getCookie(a.CONFIG.USER_COOKIE) || '';
@@ -170,6 +170,15 @@ function refreshAll() {
   if (inset) inset.refresh();
   updateProgress();
   renderDestList();
+}
+
+// Lighter path for a region toggle: only colors + progress change — no pin
+// rebuild, no list rebuild. Keeps the click feeling immediate.
+function refreshRegions() {
+  invalidateVisited();
+  if (globe) globe.recolor();
+  if (inset) inset.refresh();
+  updateProgress();
 }
 
 // The list of added destinations under the map. Each row focuses the globe on
