@@ -19,6 +19,13 @@ export function createGlobeView(container, opts) {
   const { countries, getVisited, getDestinations, onRegionClick, onPinClick } = opts;
   const codeOf = f => (f.properties && f.properties.code) || '';
 
+  // Zoom-in label anchors (lat/lng). Countries + US states are precomputed in
+  // data/map-labels.json; POIs are major cities. Shown by zoom tier, filtered
+  // to the visible hemisphere — see chooseLabels().
+  const COUNTRIES = (opts.labels && opts.labels.countries) || [];
+  const STATES = (opts.labels && opts.labels.states) || [];
+  const POIS = opts.pois || [];
+
   // pulse drives the unvisited glow; throttled re-eval keeps mobile smooth.
   let pulse = 0;
   function capColor(f) {
@@ -65,6 +72,17 @@ export function createGlobeView(container, opts) {
     .htmlAltitude(0.02)
     .htmlElement(pinEl);
 
+  world
+    .labelLat(d => d.lat).labelLng(d => d.lng)
+    .labelText(d => d.text)
+    .labelSize(d => d.size)
+    .labelDotRadius(d => d.dot)
+    .labelColor(d => d.color)
+    .labelResolution(2)
+    .labelAltitude(0.01)
+    .labelsTransitionDuration(450) // fade labels in/out when the zoom tier changes
+    .labelsData([]);
+
   world.width(container.clientWidth).height(container.clientHeight || 420);
 
   const ctrls = world.controls();
@@ -102,15 +120,57 @@ export function createGlobeView(container, opts) {
     world.pointOfView({ altitude }, 350);
   }
 
+  // Angular distance (degrees) between two lat/lng points — for "is this label
+  // on the visible side of the globe near where I'm looking?".
+  function angDist(la1, lo1, la2, lo2) {
+    const r = Math.PI / 180;
+    const dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+    const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dLo / 2) ** 2;
+    return 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) / r;
+  }
+
+  // Zoom-tiered labels: zoomed out → none; mid → country names; close →
+  // countries + US states + POIs. Only labels near the view center (visible
+  // hemisphere) are shown, capped per tier to avoid clutter and cost. Recomputed
+  // only when the view actually moves; labelsData swap fades via the transition.
+  let lastPov = { lat: 1e3, lng: 1e3, altitude: 1e3 }, labelSig = '';
+  function chooseLabels() {
+    const pov = world.pointOfView();
+    if (pov.altitude === lastPov.altitude && pov.lat === lastPov.lat && pov.lng === lastPov.lng) return;
+    lastPov = { lat: pov.lat, lng: pov.lng, altitude: pov.altitude };
+    let set = [];
+    if (pov.altitude <= 1.55) {
+      const radius = Math.min(90, Math.max(20, pov.altitude * 60));
+      const near = d => angDist(pov.lat, pov.lng, d.lat, d.lng) <= radius;
+      const countries = COUNTRIES.filter(near).slice(0, 30)
+        .map(d => ({ lat: d.lat, lng: d.lng, text: d.name, size: 0.62, dot: 0, color: 'rgba(245,230,211,0.92)' }));
+      set = countries;
+      if (pov.altitude <= 0.85) {
+        const states = STATES.filter(near).slice(0, 30)
+          .map(d => ({ lat: d.lat, lng: d.lng, text: d.name, size: 0.42, dot: 0, color: 'rgba(199,130,175,0.95)' }));
+        const pois = POIS.filter(near).slice(0, 40)
+          .map(d => ({ lat: d.lat, lng: d.lng, text: d.name, size: 0.4, dot: 0.13, color: 'rgba(245,230,211,0.78)' }));
+        set = countries.concat(states, pois);
+      }
+    }
+    const sig = set.map(s => s.text).join('|');
+    if (sig !== labelSig) {
+      labelSig = sig;
+      world.labelsData(set);
+      container.setAttribute('data-label-count', String(set.length)); // inspectable: labels are WebGL sprites, not DOM
+    }
+  }
+
   // lean: re-eval cap colors ~12fps for the glow pulse — cheap enough for ~177
   // polygons; drop to a setInterval at lower rate if a weak device struggles.
-  let last = 0, raf;
+  let last = 0, lastLabel = 0, raf;
   function animate(t) {
     if (!interacting && t - last > 80) {
       pulse = (Math.sin(t / 700) + 1) / 2;
       world.polygonCapColor(capColor);
       last = t;
     }
+    if (t - lastLabel > 150) { chooseLabels(); lastLabel = t; } // cheap no-op when the view is still
     raf = requestAnimationFrame(animate);
   }
   raf = requestAnimationFrame(animate);
