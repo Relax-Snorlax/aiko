@@ -22,4 +22,5 @@ test('cities json is a non-trivial array of points', () => {
   assert.ok(cities.length >= 1000, 'expected >=1000 cities');
   const c = cities[0];
   assert.ok(typeof c.name === 'string' && typeof c.lat === 'number' && typeof c.lng === 'number');
+  assert.ok(typeof c.country === 'string', 'each city has a country code (used for pin correlation)');
 });
