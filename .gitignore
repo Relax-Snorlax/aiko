@@ -1,2 +1,9 @@
 .superpowers/
 .worktrees/
+
+# clasp state (per-machine; contains Apps Script project ID)
+apps-script/.clasp.json
+.clasprc.json
+
+# node build tooling (build-only; outputs in data/ are committed)
+node_modules/
