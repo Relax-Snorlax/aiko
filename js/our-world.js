@@ -84,9 +84,10 @@ function ensureGlobe() {
 async function onRegionToggle(code) {
   const a = API();
   const act = model.toggleRegionAction(places, code);
-  // optimistic update
+  // optimistic update — use the normalized code from the action so persisted
+  // data stays canonical (US-CA, FR), not whatever case the layer reported
   if (act.action === 'add') {
-    places.push({ id: 'tmp-' + code, kind: 'region', code });
+    places.push({ id: 'tmp-' + act.code, kind: 'region', code: act.code });
   } else {
     places = places.filter(p => p.id !== act.id);
   }
@@ -95,7 +96,7 @@ async function onRegionToggle(code) {
   const user = a.getCookie(a.CONFIG.USER_COOKIE) || '';
   try {
     if (act.action === 'add') {
-      await a.apiPost({ action: 'addPlace', kind: 'region', code, name: code, user });
+      await a.apiPost({ action: 'addPlace', kind: 'region', code: act.code, name: act.code, user });
     } else {
       await a.apiPost({ action: 'deleteEntry', sheet: 'Places', id: act.id });
     }
@@ -168,7 +169,7 @@ function initAddDestination() {
       return;
     }
     // optimistic pin
-    const tmp = { id: 'tmp-dest', kind: 'destination', name: hit.name, lat: hit.lat, lng: hit.lng, status: 'wish' };
+    const tmp = { id: 'tmp-dest-' + Date.now(), kind: 'destination', name: hit.name, lat: hit.lat, lng: hit.lng, status: 'wish' };
     places.push(tmp);
     refreshAll();
     if (a) {

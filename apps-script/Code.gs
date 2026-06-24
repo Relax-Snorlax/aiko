@@ -392,7 +392,10 @@ function addPlace(params) {
     params.lat || '', params.lng || '',
     status, params.user || '', params.notes || ''
   ]);
-  var award = awardPointsIfEligible(params.user, 'place', id);
+  // Points are for *visiting* a place (spec: Points Integration). A wishlist
+  // pin (status 'wish') isn't a visit, so it earns nothing; regions default to
+  // 'visited' and do earn (subject to the per-action_type cooldown).
+  var award = (status === 'visited') ? awardPointsIfEligible(params.user, 'place', id) : null;
   return { success: true, id: id, date: date, points_awarded: award ? award.amount : 0 };
 }
 
