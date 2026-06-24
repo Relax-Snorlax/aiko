@@ -11,6 +11,7 @@ const API = () => window.RenAiko;
 let places = [];
 let cities = [];
 let countries = null;
+let mapLabels = null; // { countries:[{name,lat,lng}], states:[{code,name,lat,lng}] }
 let globe = null;
 let inset = null;
 let booted = false;
@@ -51,16 +52,18 @@ async function boot() {
   booted = true;
 
   const a = API();
-  const [placesData, citiesData, countriesData, aliasesData] = await Promise.all([
+  const [placesData, citiesData, countriesData, aliasesData, labelsData] = await Promise.all([
     a ? a.apiGet('getPlaces').catch(() => []) : Promise.resolve([]),
     fetch('data/cities.json').then(r => r.json()).catch(() => []),
     fetch('data/countries-110m.geojson').then(r => r.json()).catch(() => null),
-    fetch('data/country-codes.json').then(r => r.json()).catch(() => null)
+    fetch('data/country-codes.json').then(r => r.json()).catch(() => null),
+    fetch('data/map-labels.json').then(r => r.json()).catch(() => null)
   ]);
   places = normalizePlaces(placesData);
   cities = citiesData || [];
   countries = countriesData;
   countryAliases = aliasesData;
+  mapLabels = labelsData;
 
   try {
     inset = await createUsInset(document.getElementById('us-inset'), {
@@ -96,7 +99,10 @@ function ensureGlobe() {
       getVisited: visited,
       getDestinations: destinations,
       onRegionClick: onRegionToggle,
-      onPinClick: onPinToggle
+      onPinClick: onPinToggle,
+      labels: mapLabels,
+      // POIs = the most prominent cities (cities.json is population-sorted).
+      pois: cities.slice(0, 150)
     });
     // Open facing the couple's pins (globe.gl hides far-side pins), not an empty
     // ocean. Newest destination = most relevant; fall back to the default view.

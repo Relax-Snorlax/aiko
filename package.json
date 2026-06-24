@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "build:data": "node scripts/build-countries.mjs && node scripts/build-us-svg.mjs && node scripts/build-cities.mjs && node scripts/build-country-codes.mjs"
+    "build:data": "node scripts/build-countries.mjs && node scripts/build-us-svg.mjs && node scripts/build-cities.mjs && node scripts/build-country-codes.mjs && node scripts/build-labels.mjs"
   },
   "devDependencies": {
     "all-the-cities": "^3.1.0",
