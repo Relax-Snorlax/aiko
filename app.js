@@ -15,7 +15,8 @@
     USER_COOKIE: 'ren-aiko-user',
     FEATURE_LAUNCH: '2026-04-29T00:00:00Z',
     GLOW_DAYS: 14,
-    SEEN_ANNOUNCE_COOKIE: 'ren-aiko-seen-rate-points'
+    SEEN_ANNOUNCE_COOKIE: 'ren-aiko-seen-rate-points',
+    SEEN_ANNOUNCE_GLOBE_COOKIE: 'ren-aiko-seen-globe'
   };
 
   // ============================================
@@ -55,8 +56,8 @@
     return div.innerHTML;
   }
 
-  function markAnnouncementSeen() {
-    setCookie(CONFIG.SEEN_ANNOUNCE_COOKIE, '1', 3650);
+  function markSeen(cookie) {
+    setCookie(cookie, '1', 3650);
   }
 
   // ============================================
@@ -1291,37 +1292,61 @@
     loadFeedback();
     loadStats();
     maybeShowAnnouncement();
+    window.__dashboardReady = true;
+    document.dispatchEvent(new CustomEvent('dashboard:ready'));
   }
 
   // ============================================
-  // Feature Announcement (one-time, Linh only)
+  // Feature Announcements (one-time, Linh only)
+  // Shows at most one unseen announcement per load, in priority order.
   // ============================================
-  function initAnnouncement() {
-    var modal = $('announce-modal');
-    if (!modal) return;
+  var ANNOUNCEMENTS = [
+    { cookie: CONFIG.SEEN_ANNOUNCE_GLOBE_COOKIE, modalId: 'announce-globe-modal' },
+    { cookie: CONFIG.SEEN_ANNOUNCE_COOKIE,       modalId: 'announce-modal' }
+  ];
 
+  function wireSeen(modalId, cookie) {
+    var modal = $(modalId);
+    if (!modal) return;
+    var x = modal.querySelector('.modal-x');
+    if (x) x.addEventListener('click', function () { markSeen(cookie); });
+    var bg = modal.querySelector('.modal-bg');
+    if (bg) bg.addEventListener('click', function () { markSeen(cookie); });
+  }
+
+  function initAnnouncement() {
+    // Rate/points announcement: its button logs out (needs user cookie for points).
     var logoutBtn = $('announce-logout-btn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', function () {
-        markAnnouncementSeen();
+        markSeen(CONFIG.SEEN_ANNOUNCE_COOKIE);
         forceLogout();
       });
     }
-
-    // Mark seen on any dismissal path (× and backdrop click are auto-wired by initModals;
-    // we add a sibling listener that just persists the seen state).
-    var xBtn = modal.querySelector('.modal-x');
-    if (xBtn) xBtn.addEventListener('click', markAnnouncementSeen);
-    var bg = modal.querySelector('.modal-bg');
-    if (bg) bg.addEventListener('click', markAnnouncementSeen);
+    // Globe announcement: its button just opens Our World (no re-login).
+    var exploreBtn = $('announce-globe-btn');
+    if (exploreBtn) {
+      exploreBtn.addEventListener('click', function () {
+        markSeen(CONFIG.SEEN_ANNOUNCE_GLOBE_COOKIE);
+        closeModal('announce-globe-modal');
+        var section = $('our-world-section');
+        var link = document.querySelector('.nav-link[data-section="our-world-section"]');
+        if (section && section.classList.contains('hidden') && link) link.click();
+      });
+    }
+    wireSeen('announce-modal', CONFIG.SEEN_ANNOUNCE_COOKIE);
+    wireSeen('announce-globe-modal', CONFIG.SEEN_ANNOUNCE_GLOBE_COOKIE);
   }
 
   function maybeShowAnnouncement() {
     if (getCookie(CONFIG.USER_COOKIE) !== 'Linh') return;
-    if (getCookie(CONFIG.SEEN_ANNOUNCE_COOKIE)) return;
-    var modal = $('announce-modal');
-    if (!modal) return;
-    show(modal);
+    for (var i = 0; i < ANNOUNCEMENTS.length; i++) {
+      var an = ANNOUNCEMENTS[i];
+      if (!getCookie(an.cookie)) {
+        var m = $(an.modalId);
+        if (m) { show(m); return; }
+      }
+    }
   }
 
   // ============================================
@@ -1388,6 +1413,17 @@
       loadDashboard();
     }
   }
+
+  // Bridge for the Our World ES module (separate module scope can't see IIFE internals).
+  window.RenAiko = {
+    apiGet: apiGet,
+    apiPost: apiPost,
+    getCookie: getCookie,
+    setCookie: setCookie,
+    openModal: openModal,
+    closeModal: closeModal,
+    CONFIG: CONFIG
+  };
 
   document.addEventListener('DOMContentLoaded', init);
 })();
