@@ -14,6 +14,11 @@ let countries = null;
 let globe = null;
 let inset = null;
 let booted = false;
+let countryAliases = null;
+// Per-key guards so a rapid second click on the SAME region/pin can't race its
+// own in-flight network op (duplicate rows / deleting a not-yet-saved row).
+const inFlightRegions = new Set();
+const inFlightPins = new Set();
 
 const visited = () => model.visitedRegionSet(places);
 const destinations = () => model.destinationPlaces(places);
@@ -41,14 +46,16 @@ async function boot() {
   booted = true;
 
   const a = API();
-  const [placesData, citiesData, countriesData] = await Promise.all([
+  const [placesData, citiesData, countriesData, aliasesData] = await Promise.all([
     a ? a.apiGet('getPlaces').catch(() => []) : Promise.resolve([]),
     fetch('data/cities.json').then(r => r.json()).catch(() => []),
-    fetch('data/countries-110m.geojson').then(r => r.json()).catch(() => null)
+    fetch('data/countries-110m.geojson').then(r => r.json()).catch(() => null),
+    fetch('data/country-codes.json').then(r => r.json()).catch(() => null)
   ]);
   places = normalizePlaces(placesData);
   cities = citiesData || [];
   countries = countriesData;
+  countryAliases = aliasesData;
 
   try {
     inset = await createUsInset(document.getElementById('us-inset'), {
@@ -84,6 +91,9 @@ function ensureGlobe() {
 async function onRegionToggle(code) {
   const a = API();
   const act = model.toggleRegionAction(places, code);
+  // Ignore a second click on the SAME region while its op is in flight.
+  if (inFlightRegions.has(act.code)) return;
+  inFlightRegions.add(act.code);
   // optimistic update — use the normalized code from the action so persisted
   // data stays canonical (US-CA, FR), not whatever case the layer reported
   if (act.action === 'add') {
@@ -92,27 +102,37 @@ async function onRegionToggle(code) {
     places = places.filter(p => p.id !== act.id);
   }
   refreshAll();
-  if (!a) return;
-  const user = a.getCookie(a.CONFIG.USER_COOKIE) || '';
   try {
-    if (act.action === 'add') {
-      await a.apiPost({ action: 'addPlace', kind: 'region', code: act.code, name: act.code, user });
-    } else {
-      await a.apiPost({ action: 'deleteEntry', sheet: 'Places', id: act.id });
-    }
-  } catch (e) { /* reconcile below */ }
-  places = await fetchPlaces();
-  refreshAll();
+    if (!a) return;
+    const user = a.getCookie(a.CONFIG.USER_COOKIE) || '';
+    try {
+      if (act.action === 'add') {
+        await a.apiPost({ action: 'addPlace', kind: 'region', code: act.code, name: act.code, user });
+      } else {
+        await a.apiPost({ action: 'deleteEntry', sheet: 'Places', id: act.id });
+      }
+    } catch (e) { /* reconcile below */ }
+    places = await fetchPlaces();
+    refreshAll();
+  } finally {
+    inFlightRegions.delete(act.code);
+  }
 }
 
 async function onPinToggle(d) {
   const a = API();
+  const persistable = !!(a && d.id && !String(d.id).startsWith('tmp'));
+  // Ignore a double-click on the same saved pin while its edit is in flight.
+  if (persistable && inFlightPins.has(d.id)) return;
   d.status = model.nextDestinationStatus(d.status);
   refreshAll();
-  if (!a || !d.id || String(d.id).startsWith('tmp')) return;
+  if (!persistable) return;
+  inFlightPins.add(d.id);
   try {
     await a.apiPost({ action: 'editEntry', sheet: 'Places', id: d.id, status: d.status });
-  } catch (e) { /* best-effort */ }
+  } catch (e) { /* best-effort */ } finally {
+    inFlightPins.delete(d.id);
+  }
 }
 
 function refreshAll() {
@@ -138,11 +158,11 @@ function initInsetToggle() {
   const globeEl = document.getElementById('globe-wrap');
   if (!btn || !insetEl || !globeEl) return;
   btn.addEventListener('click', () => {
-    const showInset = insetEl.classList.contains('hidden');
+    const showInset = insetEl.classList.contains('hidden'); // true = switching TO the inset
     insetEl.classList.toggle('hidden', !showInset);
     globeEl.classList.toggle('hidden', showInset);
     btn.textContent = showInset ? '← Back to globe' : 'Zoom to US states';
-    if (!showInset) ensureGlobe();
+    if (!showInset) ensureGlobe(); // returning to the globe → make sure it exists
   });
 }
 
@@ -163,7 +183,7 @@ function initAddDestination() {
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const hit = lookup(input.value, cities);
+    const hit = lookup(input.value, cities, countryAliases);
     if (!hit) {
       if (status) status.textContent = 'Place not found — try a nearby major city.';
       return;
@@ -183,8 +203,8 @@ function initAddDestination() {
       places = await fetchPlaces();
       refreshAll();
       a.closeModal('ow-dest-modal');
+      form.reset();
     }
-    form.reset();
   });
 }
 

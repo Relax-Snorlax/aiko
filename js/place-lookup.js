@@ -13,10 +13,12 @@ export function normalizeName(s) {
 
 /**
  * Best match for a free-text query. Supports an optional "City, Country"
- * qualifier (matched against the alpha-2 country code, case-insensitively).
- * Returns { name, lat, lng, country } or null.
+ * qualifier: an alpha-2 code ("Paris, FR") matches directly, and a full name
+ * ("Paris, France") matches when a normalized name->code `countryAliases` map
+ * is supplied. An unresolved qualifier is ignored (falls back to best name
+ * match) rather than failing. Returns { name, lat, lng, country } or null.
  */
-export function lookup(query, cities) {
+export function lookup(query, cities, countryAliases) {
   const raw = String(query || '').trim();
   if (!raw || !Array.isArray(cities) || !cities.length) return null;
 
@@ -25,6 +27,10 @@ export function lookup(query, cities) {
   if (comma > -1) {
     namePart = raw.slice(0, comma);
     countryPart = normalizeName(raw.slice(comma + 1));
+    // Resolve a full country name to its alpha-2 code if a map is provided.
+    if (countryPart && countryAliases && countryAliases[countryPart]) {
+      countryPart = normalizeName(countryAliases[countryPart]);
+    }
   }
   const q = normalizeName(namePart);
   if (!q) return null;

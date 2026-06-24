@@ -56,3 +56,11 @@ test('progress splits states and countries', () => {
   assert.deepEqual(p.states, { visited: 1, total: 50 });
   assert.deepEqual(p.countries, { visited: 1, total: 195 });
 });
+
+test('progress with empty/absent places reports zero visited', () => {
+  assert.deepEqual(progress([], 50, 195), {
+    states: { visited: 0, total: 50 },
+    countries: { visited: 0, total: 195 }
+  });
+  assert.deepEqual(progress(undefined, 50, 195).states, { visited: 0, total: 50 });
+});
