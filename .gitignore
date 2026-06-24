@@ -7,3 +7,6 @@ apps-script/.clasp.json
 
 # node build tooling (build-only; outputs in data/ are committed)
 node_modules/
+
+# CodeGraph local index (machine-local, do not commit)
+.codegraph/

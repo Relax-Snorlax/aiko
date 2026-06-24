@@ -67,7 +67,17 @@ async function boot() {
   updateProgress();
   initAddDestination();
   initInsetToggle();
+  initZoomButtons();
   initReveal();
+}
+
+// +/- buttons drive the globe's step zoom. Attached once; they no-op until the
+// globe is lazily created, and ensure it exists on first use.
+function initZoomButtons() {
+  const inBtn = document.getElementById('globe-zoom-in');
+  const outBtn = document.getElementById('globe-zoom-out');
+  if (inBtn) inBtn.addEventListener('click', () => { ensureGlobe(); globe && globe.zoomIn(); });
+  if (outBtn) outBtn.addEventListener('click', () => { ensureGlobe(); globe && globe.zoomOut(); });
 }
 
 function ensureGlobe() {
@@ -82,6 +92,13 @@ function ensureGlobe() {
       onRegionClick: onRegionToggle,
       onPinClick: onPinToggle
     });
+    // Open facing the couple's pins (globe.gl hides far-side pins), not an empty
+    // ocean. Newest destination = most relevant; fall back to the default view.
+    const dests = destinations();
+    if (dests.length) {
+      const d = dests[dests.length - 1];
+      globe.focusOn(d.lat, d.lng);
+    }
     window.addEventListener('resize', () => globe && globe.resize());
   } catch (e) {
     el.innerHTML = '<p class="ow-fallback">Globe couldn\'t load — the US map and wishlist still work.</p>';
@@ -185,14 +202,22 @@ function initAddDestination() {
     e.preventDefault();
     const hit = lookup(input.value, cities, countryAliases);
     if (!hit) {
-      if (status) status.textContent = 'Place not found — try a nearby major city.';
+      if (status) status.textContent = 'Not found — try a country or a major city (e.g. Korea, Paris).';
       return;
     }
     // optimistic pin
     const tmp = { id: 'tmp-dest-' + Date.now(), kind: 'destination', name: hit.name, lat: hit.lat, lng: hit.lng, status: 'wish' };
     places.push(tmp);
     refreshAll();
+    // Turn the globe to the new pin — globe.gl hides back-facing pins, so
+    // without this a just-added place (e.g. Korea) lands unseen on the far side.
+    ensureGlobe();
+    if (globe) globe.focusOn(hit.lat, hit.lng);
+    // Close the modal immediately — the pin is already on the map. Persist in
+    // the background; don't make "Add" feel frozen waiting on the backend.
     if (a) {
+      a.closeModal('ow-dest-modal');
+      form.reset();
       const user = a.getCookie(a.CONFIG.USER_COOKIE) || '';
       try {
         await a.apiPost({
@@ -202,8 +227,6 @@ function initAddDestination() {
       } catch (e2) { /* reconcile below */ }
       places = await fetchPlaces();
       refreshAll();
-      a.closeModal('ow-dest-modal');
-      form.reset();
     }
   });
 }

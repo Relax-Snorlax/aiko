@@ -16,7 +16,9 @@ export function normalizeName(s) {
  * qualifier: an alpha-2 code ("Paris, FR") matches directly, and a full name
  * ("Paris, France") matches when a normalized name->code `countryAliases` map
  * is supplied. An unresolved qualifier is ignored (falls back to best name
- * match) rather than failing. Returns { name, lat, lng, country } or null.
+ * match) rather than failing. A bare country name ("Korea") with no matching
+ * city resolves to that country's most prominent city.
+ * Returns { name, lat, lng, country } or null.
  */
 export function lookup(query, cities, countryAliases) {
   const raw = String(query || '').trim();
@@ -45,6 +47,18 @@ export function lookup(query, cities, countryAliases) {
     cities.find(c => normalizeName(c.name).includes(q) && inCountry(c)) ||
     cities.find(c => normalizeName(c.name).includes(q)) ||
     null;
+
+  // Bare country name ("Korea", "France") matches no city — resolve it to its
+  // alpha-2 code and pin the most prominent city there. cities.json is
+  // population-sorted, so the first city with that code is the capital/largest
+  // (Korea -> KR -> Seoul). This is why "add Korea" used to fail.
+  if (!hit && countryAliases) {
+    const code = countryAliases[q]; // q = whole bare query, normalized
+    if (code) {
+      const cc = normalizeName(code);
+      hit = cities.find(c => normalizeName(c.country) === cc) || null;
+    }
+  }
 
   if (!hit) return null;
   return { name: hit.name, lat: hit.lat, lng: hit.lng, country: hit.country };
