@@ -923,7 +923,7 @@ html,body{margin:0;background:#0a0a0f}#g{width:100vw;height:100vh}</style></head
 <body><div id="g"></div><script type="module">
 import Globe from 'https://esm.sh/globe.gl@2.46.1';
 const countries = await fetch('data/countries-110m.geojson').then(r=>r.json());
-const w = Globe()(document.getElementById('g'))
+const w = new Globe(document.getElementById('g')) // 2.46.1: constructor, not Globe()() factory
   .backgroundColor('#0a0a0f')
   .polygonsData(countries.features)
   .polygonCapColor(()=> 'rgba(245,230,211,0.3)')
@@ -980,7 +980,7 @@ export function createGlobeView(container, opts) {
     return el;
   }
 
-  const world = Globe()(container)
+  const world = new Globe(container) // globe.gl@2.46.1 is a constructor, not the old Globe()() factory
     .backgroundColor(THEME.bg)
     .globeImageUrl(DARK_TEX)
     .showAtmosphere(true)
