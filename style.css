@@ -1433,6 +1433,72 @@ select.form-input { appearance: none; cursor: pointer; }
   50%      { box-shadow: 0 0 16px rgba(245, 230, 211, 0.95); }
 }
 
+/* Added-destinations list — under the map; focus a pin or cancel it */
+.ow-dest-list {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ow-dest-empty {
+  color: #8a8189;
+  font-size: 13px;
+  font-style: italic;
+  padding: 6px 2px;
+}
+.ow-dest-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #2a1f3d;
+  border-radius: 12px;
+  background: rgba(199, 130, 175, 0.06);
+}
+.ow-dest-item.visited { background: rgba(199, 130, 175, 0.14); }
+.ow-dest-name {
+  flex: 1;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #f5e6d3;
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.ow-dest-name:hover { color: #c782af; text-decoration: underline; }
+.ow-dest-badge {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #c782af;
+  border: 1px solid #2a1f3d;
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+.ow-dest-item.visited .ow-dest-badge { color: #f5e6d3; border-color: #c782af; }
+.ow-dest-cancel {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #2a1f3d;
+  background: transparent;
+  color: #b8b0a8;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ow-dest-cancel:hover {
+  background: rgba(220, 90, 110, 0.18);
+  border-color: #d9657a;
+  color: #ffd9df;
+}
+
 /* Add-destination hint + globe load fallback */
 .form-hint { font-size: 12px; color: #c782af; min-height: 16px; margin: 4px 0 8px; }
 .ow-fallback { padding: 36px; text-align: center; color: #b8b0a8; line-height: 1.7; }
