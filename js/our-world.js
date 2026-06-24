@@ -65,6 +65,7 @@ async function boot() {
   } catch (e) { /* inset optional */ }
 
   updateProgress();
+  renderDestList();
   initAddDestination();
   initInsetToggle();
   initZoomButtons();
@@ -156,6 +157,60 @@ function refreshAll() {
   if (globe) globe.refresh();
   if (inset) inset.refresh();
   updateProgress();
+  renderDestList();
+}
+
+// The list of added destinations under the map. Each row focuses the globe on
+// its pin, and can be cancelled (removed). Rebuilt on every data change.
+function renderDestList() {
+  const ul = document.getElementById('ow-dest-list');
+  if (!ul) return;
+  const dests = destinations();
+  ul.innerHTML = '';
+  if (!dests.length) {
+    const li = document.createElement('li');
+    li.className = 'ow-dest-empty';
+    li.textContent = 'No destinations yet — add one above.';
+    ul.appendChild(li);
+    return;
+  }
+  dests.forEach(d => {
+    const li = document.createElement('li');
+    li.className = 'ow-dest-item' + (d.status === 'visited' ? ' visited' : '');
+    const name = document.createElement('button');
+    name.type = 'button';
+    name.className = 'ow-dest-name';
+    name.textContent = d.name; // textContent: user-supplied — no HTML injection
+    name.addEventListener('click', () => { ensureGlobe(); if (globe) globe.focusOn(d.lat, d.lng); });
+    const badge = document.createElement('span');
+    badge.className = 'ow-dest-badge';
+    badge.textContent = d.status === 'visited' ? 'visited' : 'wishlist';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'ow-dest-cancel';
+    cancel.setAttribute('aria-label', 'Remove ' + d.name);
+    cancel.textContent = '×'; // ×
+    cancel.addEventListener('click', () => removeDestination(d));
+    li.append(name, badge, cancel);
+    ul.appendChild(li);
+  });
+}
+
+// Cancel a destination: optimistic removal, then delete the row server-side.
+// Unsaved (tmp) pins are dropped locally only. Guarded against double-clicks.
+async function removeDestination(d) {
+  const a = API();
+  const persistable = !!(a && d.id && !String(d.id).startsWith('tmp'));
+  if (persistable && inFlightPins.has(d.id)) return;
+  places = places.filter(p => p.id !== d.id);
+  refreshAll();
+  if (!persistable) return;
+  inFlightPins.add(d.id);
+  try {
+    await a.apiPost({ action: 'deleteEntry', sheet: 'Places', id: d.id });
+  } catch (e) { /* best-effort; next fetch reconciles */ } finally {
+    inFlightPins.delete(d.id);
+  }
 }
 
 function updateProgress() {
