@@ -1319,6 +1319,37 @@ select.form-input { appearance: none; cursor: pointer; }
 }
 .globe-canvas:active { cursor: grabbing; }
 
+/* Zoom controls — floating glass pills, top-right of the globe stage */
+.globe-zoom {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 2;
+}
+.globe-zoom-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #2a1f3d;
+  background: rgba(10, 10, 15, 0.65);
+  backdrop-filter: blur(4px);
+  color: #f5e6d3;
+  font-size: 22px;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+.globe-zoom-btn:hover {
+  background: rgba(199, 130, 175, 0.25);
+  border-color: #c782af;
+  box-shadow: 0 0 16px rgba(199, 130, 175, 0.3);
+}
+.globe-zoom-btn:active { transform: translateY(1px); }
+
 /* US drill-in map */
 .us-inset { padding: 22px; }
 .us-map { width: 100%; height: auto; display: block; }
@@ -1350,29 +1381,52 @@ select.form-input { appearance: none; cursor: pointer; }
   50%      { filter: drop-shadow(0 0 8px rgba(245, 230, 211, 0.55)); }
 }
 
-/* Destination pins (globe.gl htmlElements) */
+/* Destination pins (globe.gl htmlElements) — globe.gl centers this 0×0 wrapper
+   on the coordinate; the dot sits exactly on the point, the name floats below. */
 .globe-pin {
+  position: relative;
+  width: 0;
+  height: 0;
+  cursor: pointer;
+}
+.globe-pin-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  cursor: pointer;
   transform: translate(-50%, -50%);
   transition: transform 0.15s ease;
 }
 /* Wishlist: a hollow beacon that pulses, asking to be reached */
-.globe-pin.wish {
+.globe-pin.wish .globe-pin-dot {
   background: transparent;
   border: 2px solid #f5e6d3;
   box-shadow: 0 0 8px rgba(245, 230, 211, 0.7);
   animation: owPinPulse 2.2s ease-in-out infinite;
 }
 /* Visited: a filled, settled star */
-.globe-pin.visited {
+.globe-pin.visited .globe-pin-dot {
   background: #c782af;
   border: 2px solid #f5e6d3;
   box-shadow: 0 0 12px rgba(199, 130, 175, 0.9);
 }
-.globe-pin:hover { transform: translate(-50%, -50%) scale(1.4); }
+.globe-pin:hover .globe-pin-dot { transform: translate(-50%, -50%) scale(1.4); }
+/* Always-on name label — readable without hovering (key on touch) */
+.globe-pin-label {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #f5e6d3;
+  text-shadow: 0 1px 3px #000, 0 0 6px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+}
 
 @keyframes owPinPulse {
   0%, 100% { box-shadow: 0 0 6px rgba(245, 230, 211, 0.55); }

@@ -27,9 +27,17 @@ export function createGlobeView(container, opts) {
     return `rgba(245,230,211,${a})`;
   }
 
+  // Pin = a dot on the coordinate + an always-on name label beneath it, so the
+  // place is readable without hovering (hover tooltips are dead on touch).
   function pinEl(d) {
     const el = document.createElement('div');
     el.className = 'globe-pin ' + (d.status === 'visited' ? 'visited' : 'wish');
+    const dot = document.createElement('span');
+    dot.className = 'globe-pin-dot';
+    const label = document.createElement('span');
+    label.className = 'globe-pin-label';
+    label.textContent = d.name; // textContent: name is user-supplied — no HTML injection
+    el.append(dot, label);
     el.title = d.name + (d.status === 'visited' ? ' (visited)' : ' (wishlist)');
     el.addEventListener('click', e => { e.stopPropagation(); onPinClick(d); });
     return el;
@@ -49,6 +57,7 @@ export function createGlobeView(container, opts) {
     .polygonSideColor(() => 'rgba(199,130,175,0.06)')
     .polygonStrokeColor(() => THEME.stroke)
     .polygonsTransitionDuration(0) // 0: glow re-applies cap colors ~12fps; a tween here would never finish and look laggy/flat
+    .polygonLabel(f => (f.properties && f.properties.name) || '') // hover/tap a country to read its name
     .onPolygonClick(f => onRegionClick(codeOf(f)))
     .htmlElementsData(getDestinations())
     .htmlLat(d => d.lat)
@@ -59,9 +68,26 @@ export function createGlobeView(container, opts) {
   world.width(container.clientWidth).height(container.clientHeight || 420);
 
   const ctrls = world.controls();
-  ctrls.autoRotate = true;
+  // Auto-rotate OFF: globe.gl hides html pins on the far hemisphere, so a
+  // spinning globe makes destination pins (and their names) blink in and out —
+  // and a just-added pin can land on the back, invisible. A calm, draggable
+  // globe keeps pins readable. (Was the core of "can't see places" / "add
+  // isn't working".) stopSpin stays wired in case rotate is re-enabled.
+  ctrls.autoRotate = false;
   ctrls.autoRotateSpeed = 0.6;
-  container.addEventListener('pointerdown', () => { ctrls.autoRotate = false; });
+  const stopSpin = () => { ctrls.autoRotate = false; };
+  container.addEventListener('pointerdown', stopSpin);
+  container.addEventListener('wheel', stopSpin, { passive: true });
+
+  // Step zoom for the +/- buttons — globe.gl wheel/pinch zoom works, but the
+  // buttons make it discoverable (the core of "can't zoom"). Clamped so you
+  // can't fly through or lose the globe. Reuses the focusUS pointOfView pattern.
+  function zoomBy(factor) {
+    stopSpin();
+    const pov = world.pointOfView();
+    const altitude = Math.min(4, Math.max(0.35, pov.altitude * factor));
+    world.pointOfView({ altitude }, 350);
+  }
 
   // lean: re-eval cap colors ~12fps for the glow pulse — cheap enough for ~177
   // polygons; drop to a setInterval at lower rate if a weak device struggles.
@@ -84,6 +110,16 @@ export function createGlobeView(container, opts) {
     focusUS() {
       world.pointOfView({ lat: 39.8, lng: -98.6, altitude: 1.6 }, 900);
     },
+    // Rotate the globe to face a coordinate — globe.gl occludes back-facing
+    // pins, so we turn newly-added/selected places to the front to be seen.
+    focusOn(lat, lng) {
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        stopSpin();
+        world.pointOfView({ lat, lng, altitude: 1.7 }, 800);
+      }
+    },
+    zoomIn() { zoomBy(0.65); },
+    zoomOut() { zoomBy(1.5); },
     resize() {
       world.width(container.clientWidth).height(container.clientHeight || 420);
     },

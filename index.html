@@ -121,6 +121,10 @@
       </div>
       <div id="globe-wrap" class="globe-wrap">
         <div id="globe-canvas" class="globe-canvas"></div>
+        <div class="globe-zoom">
+          <button id="globe-zoom-in" class="globe-zoom-btn" type="button" aria-label="Zoom in">+</button>
+          <button id="globe-zoom-out" class="globe-zoom-btn" type="button" aria-label="Zoom out">&minus;</button>
+        </div>
       </div>
       <div id="us-inset" class="us-inset hidden"></div>
     </section>
@@ -344,7 +348,7 @@
       </div>
       <form id="ow-dest-form">
         <label class="form-label">Place name
-          <input type="text" id="ow-dest-name" class="form-input" placeholder="e.g. Paris, Banff, Tokyo" autocomplete="off" required>
+          <input type="text" id="ow-dest-name" class="form-input" placeholder="e.g. Korea, Paris, Tokyo" autocomplete="off" required>
         </label>
         <p id="ow-dest-status" class="form-hint"></p>
         <button type="submit" class="form-submit">Add to map</button>
