@@ -20,7 +20,12 @@ let countryAliases = null;
 const inFlightRegions = new Set();
 const inFlightPins = new Set();
 
-const visited = () => model.visitedRegionSet(places);
+// Visited set is read on every glow frame (per polygon, ~12fps) — memoize it so
+// the hot path doesn't rebuild a Set from `places` thousands of times a second.
+// Invalidated whenever places changes (refreshAll runs after every mutation).
+let _visitedCache = null;
+const visited = () => (_visitedCache || (_visitedCache = model.visitedRegionSet(places)));
+const invalidateVisited = () => { _visitedCache = null; };
 const destinations = () => model.destinationPlaces(places);
 
 // Sheets returns numbers as strings; coerce destination lat/lng so globe.gl's
@@ -154,6 +159,7 @@ async function onPinToggle(d) {
 }
 
 function refreshAll() {
+  invalidateVisited(); // places changed — drop the cached visited set
   if (globe) globe.refresh();
   if (inset) inset.refresh();
   updateProgress();

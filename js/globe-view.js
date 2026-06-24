@@ -76,14 +76,27 @@ export function createGlobeView(container, opts) {
   ctrls.autoRotate = false;
   ctrls.autoRotateSpeed = 0.6;
   const stopSpin = () => { ctrls.autoRotate = false; };
-  container.addEventListener('pointerdown', stopSpin);
-  container.addEventListener('wheel', stopSpin, { passive: true });
+
+  // While the user is dragging/zooming/clicking, pause the glow re-color: the
+  // full-polygon recolor competes with hit-testing + the camera, making
+  // interaction feel laggy. Resume the glow shortly after they stop. This is
+  // the "snappier clicking" lever — keep the main thread free during input.
+  let interacting = false, interactTimer = null;
+  const endInteract = () => {
+    clearTimeout(interactTimer);
+    interactTimer = setTimeout(() => { interacting = false; }, 300);
+  };
+  const beginInteract = () => { interacting = true; clearTimeout(interactTimer); };
+  container.addEventListener('pointerdown', () => { stopSpin(); beginInteract(); });
+  window.addEventListener('pointerup', endInteract);
+  container.addEventListener('wheel', () => { stopSpin(); beginInteract(); endInteract(); }, { passive: true });
 
   // Step zoom for the +/- buttons — globe.gl wheel/pinch zoom works, but the
   // buttons make it discoverable (the core of "can't zoom"). Clamped so you
   // can't fly through or lose the globe. Reuses the focusUS pointOfView pattern.
   function zoomBy(factor) {
     stopSpin();
+    beginInteract(); endInteract();
     const pov = world.pointOfView();
     const altitude = Math.min(4, Math.max(0.35, pov.altitude * factor));
     world.pointOfView({ altitude }, 350);
@@ -93,7 +106,7 @@ export function createGlobeView(container, opts) {
   // polygons; drop to a setInterval at lower rate if a weak device struggles.
   let last = 0, raf;
   function animate(t) {
-    if (t - last > 80) {
+    if (!interacting && t - last > 80) {
       pulse = (Math.sin(t / 700) + 1) / 2;
       world.polygonCapColor(capColor);
       last = t;
@@ -115,6 +128,7 @@ export function createGlobeView(container, opts) {
     focusOn(lat, lng) {
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
         stopSpin();
+        beginInteract(); endInteract();
         world.pointOfView({ lat, lng, altitude: 1.7 }, 800);
       }
     },
