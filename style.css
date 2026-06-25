@@ -1320,6 +1320,32 @@ select.form-input { appearance: none; cursor: pointer; }
 }
 .globe-canvas:active { cursor: grabbing; }
 
+/* Click reward — an expanding ripple ring that pulses out from the tap point */
+.globe-ripple {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  box-sizing: border-box;
+}
+.globe-ripple.add {
+  border: 2px solid rgba(199, 130, 175, 0.75);
+  box-shadow: 0 0 12px rgba(199, 130, 175, 0.5);
+  animation: rippleOut 0.85s ease-out forwards;
+}
+.globe-ripple.remove {
+  border: 2px solid rgba(245, 230, 211, 0.65);
+  animation: rippleOut 0.75s ease-out forwards;
+}
+@keyframes rippleOut {
+  0%   { width: 6px; height: 6px; opacity: 0.95; }
+  100% { width: 96px; height: 96px; opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .globe-ripple { animation-duration: 0.01ms !important; opacity: 0 !important; }
+}
+
 /* Click reward — a tasteful spark that pops where you (un)claim a region */
 .globe-spark {
   position: absolute;
