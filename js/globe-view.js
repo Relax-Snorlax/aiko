@@ -50,6 +50,16 @@ export function createGlobeView(container, opts) {
     return el;
   }
 
+  // Zoom-in place label — crisp upright HTML, haloed for contrast against the
+  // globe, pointer-transparent. (Replaced the old 3D text sprites, which had no
+  // occlusion and bled through from the back, and were low-contrast.)
+  function labelEl(d) {
+    const el = document.createElement('div');
+    el.className = 'globe-label ' + d.cls; // country | state | poi
+    el.textContent = d.text; // textContent: place names — no HTML injection
+    return el;
+  }
+
   // globe.gl@2.46.1: instantiate with `new` (the old Globe()(el) factory was
   // removed in the 2.4x line).
   const world = new Globe(container)
@@ -72,22 +82,14 @@ export function createGlobeView(container, opts) {
       celebrate(ll[1], ll[0], adding); // dopamine: ripple + spark right where you tapped
       onRegionClick(code);
     })
+    // Pins AND zoom-labels share the single html layer — globe.gl auto-occludes
+    // far-side html elements, so back labels cleanly vanish (no show-through) and
+    // front ones stay crisp. The element type is chosen per datum.
     .htmlElementsData(getDestinations())
     .htmlLat(d => d.lat)
     .htmlLng(d => d.lng)
-    .htmlAltitude(0.02)
-    .htmlElement(pinEl);
-
-  world
-    .labelLat(d => d.lat).labelLng(d => d.lng)
-    .labelText(d => d.text)
-    .labelSize(d => d.size)
-    .labelDotRadius(d => d.dot)
-    .labelColor(d => d.color)
-    .labelResolution(2)
-    .labelAltitude(0.01)
-    .labelsTransitionDuration(450) // fade labels in/out when the zoom tier changes
-    .labelsData([]);
+    .htmlAltitude(d => d.__t === 'label' ? 0.008 : 0.02)
+    .htmlElement(d => d.__t === 'label' ? labelEl(d) : pinEl(d));
 
   world.width(container.clientWidth).height(container.clientHeight || 420);
 
@@ -189,48 +191,69 @@ export function createGlobeView(container, opts) {
     return 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) / r;
   }
 
-  // Zoom-tiered labels: zoomed out → none; mid → country names; close →
-  // countries + US states + POIs. Only labels near the view center (visible
-  // hemisphere) are shown, capped per tier to avoid clutter and cost. Recomputed
-  // only when the view actually moves; labelsData swap fades via the transition.
-  let lastPov = { lat: 1e3, lng: 1e3, altitude: 1e3 }, labelSig = '';
+  // The html layer holds pins + the current label set. syncHtml rebuilds it;
+  // pin objects keep stable identity so globe.gl doesn't recreate their elements.
+  let currentLabels = [];
+  function syncHtml() {
+    world.htmlElementsData(getDestinations().concat(currentLabels));
+  }
+
+  // Zoom-tiered, DE-CLUTTERED labels — clarity is the goal. Tier by altitude
+  // (out→none, mid→countries, close→ +states +POIs). Candidates near the view
+  // center are sorted by priority (countries/states beat POIs; nearer first),
+  // then greedily placed while skipping any that would sit within minSep° of one
+  // already placed — so labels never pile on top of each other. Hard total cap.
+  let labelSig = '';
   function chooseLabels() {
     const pov = world.pointOfView();
-    if (pov.altitude === lastPov.altitude && pov.lat === lastPov.lat && pov.lng === lastPov.lng) return;
-    lastPov = { lat: pov.lat, lng: pov.lng, altitude: pov.altitude };
-    let set = [];
+    const cand = [];
     if (pov.altitude <= 1.55) {
-      const radius = Math.min(90, Math.max(20, pov.altitude * 60));
-      const near = d => angDist(pov.lat, pov.lng, d.lat, d.lng) <= radius;
-      const countries = COUNTRIES.filter(near).slice(0, 30)
-        .map(d => ({ lat: d.lat, lng: d.lng, text: d.name, size: 0.62, dot: 0, color: 'rgba(245,230,211,0.92)' }));
-      set = countries;
-      if (pov.altitude <= 0.85) {
-        const states = STATES.filter(near).slice(0, 30)
-          .map(d => ({ lat: d.lat, lng: d.lng, text: d.name, size: 0.42, dot: 0, color: 'rgba(199,130,175,0.95)' }));
-        const pois = POIS.filter(near).slice(0, 40)
-          .map(d => ({ lat: d.lat, lng: d.lng, text: d.name, size: 0.4, dot: 0.13, color: 'rgba(245,230,211,0.78)' }));
-        set = countries.concat(states, pois);
-      }
+      const radius = Math.min(85, Math.max(18, pov.altitude * 60));
+      const add = (arr, cls, penalty) => {
+        for (const d of arr) {
+          const nd = angDist(pov.lat, pov.lng, d.lat, d.lng);
+          if (nd <= radius) cand.push({ lat: d.lat, lng: d.lng, text: d.name, cls, pri: nd + penalty });
+        }
+      };
+      add(COUNTRIES, 'country', 0);
+      if (pov.altitude <= 0.85) { add(STATES, 'state', 0); add(POIS, 'poi', 120); }
     }
-    const sig = set.map(s => s.text).join('|');
-    if (sig !== labelSig) {
-      labelSig = sig;
-      world.labelsData(set);
-      container.setAttribute('data-label-count', String(set.length)); // inspectable: labels are WebGL sprites, not DOM
+    cand.sort((a, b) => a.pri - b.pri);
+    const minSep = Math.min(13, Math.max(3.5, pov.altitude * 15)); // ° between labels; denser when closer
+    const placed = [];
+    for (const c of cand) {
+      if (placed.length >= 22) break; // hard total cap — readability over completeness
+      if (placed.some(p => angDist(p.lat, p.lng, c.lat, c.lng) < minSep)) continue;
+      placed.push(c);
     }
+    const sig = placed.map(p => p.cls + p.text).join('|');
+    if (sig === labelSig) return;
+    labelSig = sig;
+    currentLabels = placed.map(p => ({ __t: 'label', lat: p.lat, lng: p.lng, text: p.text, cls: p.cls }));
+    syncHtml();
+    container.setAttribute('data-label-count', String(currentLabels.length));
   }
 
   // lean: re-eval cap colors ~12fps for the glow pulse — cheap enough for ~177
   // polygons; drop to a setInterval at lower rate if a weak device struggles.
-  let last = 0, lastLabel = 0, raf;
+  let last = 0, raf, settlePov = { a: 1e3, lat: 1e3, lng: 1e3 }, moveT = -1;
   function animate(t) {
     if (!interacting && t - last > 80) {
       pulse = (Math.sin(t / 700) + 1) / 2;
       world.polygonCapColor(capColor);
       last = t;
     }
-    if (t - lastLabel > 150) { chooseLabels(); lastLabel = t; } // cheap no-op when the view is still
+    // Recompute labels only AFTER the view settles (~140ms still) — not every
+    // frame. During motion, existing labels ride the globe via globe.gl's own
+    // positioning, so they track correctly and don't churn/flicker.
+    const pov = world.pointOfView();
+    if (pov.altitude !== settlePov.a || pov.lat !== settlePov.lat || pov.lng !== settlePov.lng) {
+      settlePov = { a: pov.altitude, lat: pov.lat, lng: pov.lng };
+      moveT = t;
+    } else if (moveT >= 0 && t - moveT > 140) {
+      chooseLabels();
+      moveT = -1;
+    }
     raf = requestAnimationFrame(animate);
   }
   raf = requestAnimationFrame(animate);
@@ -238,7 +261,7 @@ export function createGlobeView(container, opts) {
   return {
     refresh() {
       world.polygonCapColor(capColor);
-      world.htmlElementsData(getDestinations());
+      syncHtml(); // pins + current labels
     },
     // Region click only changes polygon colors — skip the pin (htmlElements)
     // rebuild to keep the click path light.
