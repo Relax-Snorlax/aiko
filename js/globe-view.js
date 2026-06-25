@@ -303,6 +303,9 @@ export function createGlobeView(container, opts) {
     },
     zoomIn() { zoomBy(0.65); },
     zoomOut() { zoomBy(1.5); },
+    // Fire the click reward at a coordinate (e.g. when a destination pin is
+    // toggled) so pins feel as responsive as country clicks.
+    celebrateAt(lat, lng, adding) { celebrate(lat, lng, adding); },
     resize() {
       world.width(container.clientWidth).height(container.clientHeight || 420);
     },

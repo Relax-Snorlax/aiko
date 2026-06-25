@@ -25,6 +25,7 @@ const inFlightPins = new Set();
 const regionBackendId = new Map();   // normalized code -> real backend id
 const regionSyncTimers = new Map();  // code -> debounce timer
 let regionSyncChain = Promise.resolve(); // serialize region network ops in order
+const pinSyncTimers = new Map();     // pin id -> debounce timer for status edits
 
 // Seed backend ids from a freshly-fetched places list (real ids only).
 function seedRegionBackendIds(rows) {
@@ -176,20 +177,25 @@ async function reconcileRegion(code) {
   }
 }
 
-async function onPinToggle(d) {
-  const a = API();
-  const persistable = !!(a && d.id && !String(d.id).startsWith('tmp'));
-  // Ignore a double-click on the same saved pin while its edit is in flight.
-  if (persistable && inFlightPins.has(d.id)) return;
+// Clicking a destination pin toggles wish <-> visited. Now INSTANT + rewarded:
+// flip the status, fire the same celebration as a country click (heart when you
+// mark it visited — "we made it here!" — sparkle when back to wishlist), repaint
+// now, and sync the edit to the backend in the background (debounced, no block).
+function onPinToggle(d) {
   d.status = model.nextDestinationStatus(d.status);
+  if (globe) globe.celebrateAt(d.lat, d.lng, d.status === 'visited');
   refreshAll();
-  if (!persistable) return;
-  inFlightPins.add(d.id);
-  try {
-    await a.apiPost({ action: 'editEntry', sheet: 'Places', id: d.id, status: d.status });
-  } catch (e) { /* best-effort */ } finally {
-    inFlightPins.delete(d.id);
-  }
+  schedulePinSync(d);
+}
+
+// Debounced background status save per pin — never blocks re-clicking.
+function schedulePinSync(d) {
+  const a = API();
+  if (!a || !d.id || String(d.id).startsWith('tmp')) return;
+  clearTimeout(pinSyncTimers.get(d.id));
+  pinSyncTimers.set(d.id, setTimeout(() => {
+    a.apiPost({ action: 'editEntry', sheet: 'Places', id: d.id, status: d.status }).catch(() => {});
+  }, 350));
 }
 
 function refreshAll() {
