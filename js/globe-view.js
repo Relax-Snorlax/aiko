@@ -52,10 +52,28 @@ export function createGlobeView(container, opts) {
 
   // pulse drives the unvisited glow; throttled re-eval keeps mobile smooth.
   let pulse = 0;
+  // A clicked country briefly flashes bright then settles — so the thing you
+  // tapped *reacts* (mirrors the US-inset state flash). flashT0/animT share the
+  // rAF/performance.now clock. FLASH_MS kept short so it stays subtle.
+  let flashCode = null, flashT0 = 0, animT = 0;
+  const FLASH_MS = 420;
+  function flashRegion(code) { flashCode = code; flashT0 = animT; }
   function capColor(f) {
-    if (getVisited().has(codeOf(f))) return THEME.visited;
-    const a = (0.10 + pulse * 0.30).toFixed(3); // 0.10..0.40 cream glow
-    return `rgba(245,230,211,${a})`;
+    const code = codeOf(f);
+    const visited = getVisited().has(code);
+    let r, g, b, a;
+    if (visited) { r = 199; g = 130; b = 175; a = 0.85; }       // solid mauve
+    else { r = 245; g = 230; b = 211; a = 0.10 + pulse * 0.30; } // cream glow
+    if (code && code === flashCode) {
+      const k = 1 - (animT - flashT0) / FLASH_MS; // 1 → 0 over the flash
+      if (k <= 0) flashCode = null;
+      else { // ease toward bright cream, lift alpha — a gentle, subtle pop
+        const e = k * 0.55;
+        r += (255 - r) * e; g += (248 - g) * e; b += (236 - b) * e;
+        a += (0.85 - a) * k * 0.8;
+      }
+    }
+    return `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`;
   }
 
   // Pin = a dot on the coordinate + an always-on name label beneath it, so the
@@ -103,7 +121,8 @@ export function createGlobeView(container, opts) {
       const code = codeOf(f);
       const adding = !getVisited().has(code); // claiming vs releasing — before the toggle
       const ll = (coords && Number.isFinite(coords.lat)) ? [coords.lng, coords.lat] : centroidOf(f);
-      celebrate(ll[1], ll[0], adding); // dopamine: ripple + spark right where you tapped
+      flashRegion(code);                  // the country itself pops
+      celebrate(ll[1], ll[0], adding);    // + ripple + spark right where you tapped
       onRegionClick(code);
     })
     // Pins AND zoom-labels share the single html layer — globe.gl auto-occludes
@@ -229,7 +248,11 @@ export function createGlobeView(container, opts) {
   // polygons; drop to a setInterval at lower rate if a weak device struggles.
   let last = 0, raf, settlePov = { a: 1e3, lat: 1e3, lng: 1e3 }, moveT = -1;
   function animate(t) {
-    if (!interacting && t - last > 80) {
+    animT = t;
+    // Normally the glow re-color pauses during interaction (snappiness). But
+    // while a click-flash is running, re-color at full rate so the pop animates.
+    const flashing = flashCode !== null;
+    if ((!interacting || flashing) && t - last > (flashing ? 16 : 80)) {
       pulse = (Math.sin(t / 700) + 1) / 2;
       world.polygonCapColor(capColor);
       last = t;
