@@ -16,10 +16,23 @@ let globe = null;
 let inset = null;
 let booted = false;
 let countryAliases = null;
-// Per-key guards so a rapid second click on the SAME region/pin can't race its
-// own in-flight network op (duplicate rows / deleting a not-yet-saved row).
-const inFlightRegions = new Set();
+// Per-key guard so a rapid second click on the SAME pin can't race its edit.
 const inFlightPins = new Set();
+// Region toggles update the UI INSTANTLY and sync to the slow backend in the
+// background — never blocking re-clicks (Apps Script can take seconds). We track
+// the backend's real id per region separately from the optimistic `places`, so
+// a later delete can target it even though the UI already removed the row.
+const regionBackendId = new Map();   // normalized code -> real backend id
+const regionSyncTimers = new Map();  // code -> debounce timer
+let regionSyncChain = Promise.resolve(); // serialize region network ops in order
+
+// Seed backend ids from a freshly-fetched places list (real ids only).
+function seedRegionBackendIds(rows) {
+  regionBackendId.clear();
+  for (const p of model.regionPlaces(rows)) {
+    if (p.id && !String(p.id).startsWith('tmp')) regionBackendId.set(model.normalizeRegionCode(p.code), p.id);
+  }
+}
 
 // Visited set is read on every glow frame (per polygon, ~12fps) — memoize it so
 // the hot path doesn't rebuild a Set from `places` thousands of times a second.
@@ -60,6 +73,7 @@ async function boot() {
     fetch('data/map-labels.json').then(r => r.json()).catch(() => null)
   ]);
   places = normalizePlaces(placesData);
+  seedRegionBackendIds(places); // remember backend ids so background region sync can delete
   cities = citiesData || [];
   countries = countriesData;
   countryAliases = aliasesData;
@@ -117,34 +131,48 @@ function ensureGlobe() {
   }
 }
 
-async function onRegionToggle(code) {
-  const a = API();
+// Toggle is INSTANT: flip the optimistic state + repaint now, then sync the net
+// result to the backend in the background. Re-clicking is never blocked.
+function onRegionToggle(code) {
   const act = model.toggleRegionAction(places, code);
-  // Ignore a second click on the SAME region while its op is in flight.
-  if (inFlightRegions.has(act.code)) return;
-  inFlightRegions.add(act.code);
-  // optimistic update — use the normalized code from the action so persisted
-  // data stays canonical (US-CA, FR), not whatever case the layer reported
   if (act.action === 'add') {
+    // canonical code (US-CA, FR) regardless of what case the layer reported
     places.push({ id: 'tmp-' + act.code, kind: 'region', code: act.code });
   } else {
     places = places.filter(p => p.id !== act.id);
   }
-  refreshRegions(); // click path: colors only — pins/list didn't change
-  try {
-    if (!a) return;
-    const user = a.getCookie(a.CONFIG.USER_COOKIE) || '';
-    try {
-      if (act.action === 'add') {
-        await a.apiPost({ action: 'addPlace', kind: 'region', code: act.code, name: act.code, user });
-      } else {
-        await a.apiPost({ action: 'deleteEntry', sheet: 'Places', id: act.id });
-      }
-    } catch (e) { /* reconcile below */ }
-    places = await fetchPlaces();
-    refreshAll();
-  } finally {
-    inFlightRegions.delete(act.code);
+  refreshRegions(); // colors + progress only — pins/list unchanged
+  scheduleRegionSync(act.code);
+}
+
+// Debounce per region (coalesce rapid on/off) then run reconcile on a serial
+// chain so ops for a region never overlap (and a delete waits for its add's id).
+function scheduleRegionSync(code) {
+  const c = model.normalizeRegionCode(code);
+  clearTimeout(regionSyncTimers.get(c));
+  regionSyncTimers.set(c, setTimeout(() => {
+    regionSyncChain = regionSyncChain.then(() => reconcileRegion(c)).catch(() => {});
+  }, 350));
+}
+
+// Bring the backend to the region's current desired (optimistic) state.
+async function reconcileRegion(code) {
+  const a = API();
+  if (!a) return;
+  const c = model.normalizeRegionCode(code);
+  const desiredVisited = model.isRegionVisited(places, c);
+  const backendId = regionBackendId.get(c);
+  const user = a.getCookie(a.CONFIG.USER_COOKIE) || '';
+  if (desiredVisited && !backendId) {
+    const res = await a.apiPost({ action: 'addPlace', kind: 'region', code: c, name: c, user }).catch(() => null);
+    if (res && res.id) {
+      regionBackendId.set(c, res.id);
+      const row = model.regionPlaces(places).find(p => model.normalizeRegionCode(p.code) === c);
+      if (row && String(row.id).startsWith('tmp')) row.id = res.id; // tmp -> real id
+    }
+  } else if (!desiredVisited && backendId) {
+    await a.apiPost({ action: 'deleteEntry', sheet: 'Places', id: backendId }).catch(() => {});
+    regionBackendId.delete(c);
   }
 }
 
