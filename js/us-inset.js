@@ -1,5 +1,7 @@
 // Flat SVG US map drill-in. Loads data/us-states.svg, wires state clicks,
 // and reflects visited state via CSS classes. Browser-only.
+import { HEART_SVG, SPARK_SVG } from './globe-view.js';
+
 export async function createUsInset(container, opts) {
   const { getVisited, onStateClick } = opts;
   const res = await fetch('data/us-states.svg');
@@ -27,7 +29,7 @@ export async function createUsInset(container, opts) {
     const rect = container.getBoundingClientRect();
     const el = document.createElement('div');
     el.className = 'globe-spark ' + (adding ? 'add' : 'remove');
-    el.textContent = adding ? '♥' : '✦';
+    el.innerHTML = adding ? HEART_SVG : SPARK_SVG;
     el.style.left = (clientX - rect.left) + 'px';
     el.style.top = (clientY - rect.top) + 'px';
     container.appendChild(el);

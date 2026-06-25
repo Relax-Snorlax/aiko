@@ -1325,18 +1325,18 @@ select.form-input { appearance: none; cursor: pointer; }
   position: absolute;
   transform: translate(-50%, -50%);
   pointer-events: none;
-  font-size: 22px;
   z-index: 3;
   will-change: transform, opacity;
 }
+.globe-spark svg { display: block; width: 24px; height: 24px; fill: currentColor; }
 .globe-spark.add {
-  color: #c782af;
-  text-shadow: 0 0 10px rgba(199, 130, 175, 0.9), 0 0 4px rgba(245, 230, 211, 0.6);
+  color: #d98ec0;
+  filter: drop-shadow(0 0 7px rgba(199, 130, 175, 0.85)) drop-shadow(0 0 2px rgba(245, 230, 211, 0.5));
   animation: sparkAdd 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 .globe-spark.remove {
   color: #f5e6d3;
-  text-shadow: 0 0 9px rgba(245, 230, 211, 0.85);
+  filter: drop-shadow(0 0 6px rgba(245, 230, 211, 0.8));
   animation: sparkRemove 0.85s ease-out forwards;
 }
 /* Claim: a heart that pops and floats up, joyful */
