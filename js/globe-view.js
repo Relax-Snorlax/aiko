@@ -226,7 +226,14 @@ export function createGlobeView(container, opts) {
         }
       };
       add(COUNTRIES, 'country', 0);
-      if (pov.altitude <= 0.85) { add(STATES, 'state', 0); add(POIS, 'poi', 120); }
+      if (pov.altitude <= 0.85) {
+        add(STATES, 'state', 0);
+        // Don't label a POI that's already a destination pin (avoid a duplicate
+        // name next to the pin — e.g. a "Seoul" pin + a "Seoul" POI label).
+        const pins = getDestinations();
+        const notPinned = d => !pins.some(p => Number.isFinite(p.lat) && angDist(p.lat, p.lng, d.lat, d.lng) < 1.2);
+        add(POIS.filter(notPinned), 'poi', 120);
+      }
     }
     cand.sort((a, b) => a.pri - b.pri);
     const minSep = Math.min(13, Math.max(3.5, pov.altitude * 15)); // ° between labels; denser when closer
