@@ -10,8 +10,31 @@ export async function createUsInset(container, opts) {
   svg.addEventListener('click', e => {
     const path = e.target.closest('path[data-code]');
     if (!path) return;
-    onStateClick(path.getAttribute('data-code'));
+    const code = path.getAttribute('data-code');
+    const adding = !getVisited().has(code); // claiming vs releasing — before toggle
+    // Same dopamine as the globe: a spark at the tap + a quick flash on the state.
+    spawnSpark(e.clientX, e.clientY, adding);
+    path.classList.remove('just-claimed', 'just-released');
+    void path.getBoundingClientRect(); // restart the CSS animation
+    path.classList.add(adding ? 'just-claimed' : 'just-released');
+    // Drop the flash class once it finishes so the visited/unvisited glow resumes.
+    path.addEventListener('animationend', () => path.classList.remove('just-claimed', 'just-released'), { once: true });
+    onStateClick(code);
   });
+
+  // Screen-space spark, mirrors globe-view's. Positioned within the inset.
+  function spawnSpark(clientX, clientY, adding) {
+    const rect = container.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'globe-spark ' + (adding ? 'add' : 'remove');
+    el.textContent = adding ? '♥' : '✦';
+    el.style.left = (clientX - rect.left) + 'px';
+    el.style.top = (clientY - rect.top) + 'px';
+    container.appendChild(el);
+    const done = () => el.remove();
+    el.addEventListener('animationend', done);
+    setTimeout(done, 1300);
+  }
 
   function refresh() {
     const visited = getVisited();

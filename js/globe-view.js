@@ -65,7 +65,13 @@ export function createGlobeView(container, opts) {
     .polygonStrokeColor(() => THEME.stroke)
     .polygonsTransitionDuration(0) // 0: glow re-applies cap colors ~12fps; a tween here would never finish and look laggy/flat
     .polygonLabel(f => (f.properties && f.properties.name) || '') // hover/tap a country to read its name
-    .onPolygonClick(f => onRegionClick(codeOf(f)))
+    .onPolygonClick((f, event, coords) => {
+      const code = codeOf(f);
+      const adding = !getVisited().has(code); // claiming vs releasing — before the toggle
+      const ll = (coords && Number.isFinite(coords.lat)) ? [coords.lng, coords.lat] : centroidOf(f);
+      celebrate(ll[1], ll[0], adding); // dopamine: ripple + spark right where you tapped
+      onRegionClick(code);
+    })
     .htmlElementsData(getDestinations())
     .htmlLat(d => d.lat)
     .htmlLng(d => d.lng)
@@ -84,6 +90,60 @@ export function createGlobeView(container, opts) {
     .labelsData([]);
 
   world.width(container.clientWidth).height(container.clientHeight || 420);
+
+  // Rings layer = the "claim" ripple that pulses out from a clicked region.
+  let rings = [];
+  world
+    .ringColor(d => d.colorFn)
+    .ringMaxRadius(d => d.maxR)
+    .ringPropagationSpeed(d => d.speed)
+    .ringRepeatPeriod(() => 1e6) // one-shot: emit once, we drop the datum before it repeats
+    .ringAltitude(0.011)
+    .ringsData(rings);
+
+  // Dopamine on (un)claim: a ripple pulses out from the tapped point on the
+  // globe + a little spark pops in screen space. Tasteful, ~1s, self-cleaning.
+  function celebrate(lat, lng, adding) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const rgb = adding ? '199,130,175' : '245,230,211'; // mauve claim / cream release
+    const a0 = adding ? 0.6 : 0.45;
+    const ring = {
+      lat, lng,
+      maxR: adding ? 4.2 : 3.4,
+      speed: adding ? 4 : 5,
+      colorFn: t => `rgba(${rgb},${(a0 * (1 - t)).toFixed(3)})`
+    };
+    rings = rings.concat(ring);
+    world.ringsData(rings);
+    setTimeout(() => { rings = rings.filter(r => r !== ring); world.ringsData(rings); }, 1200);
+    spawnSpark(lat, lng, adding);
+  }
+
+  function spawnSpark(lat, lng, adding) {
+    let sc;
+    try { sc = world.getScreenCoords(lat, lng, 0.02); } catch (e) { return; }
+    if (!sc) return;
+    const el = document.createElement('div');
+    el.className = 'globe-spark ' + (adding ? 'add' : 'remove');
+    el.textContent = adding ? '♥' : '✦'; // ♥ claim / ✦ release
+    el.style.left = sc.x + 'px';
+    el.style.top = sc.y + 'px';
+    container.appendChild(el);
+    const done = () => el.remove();
+    el.addEventListener('animationend', done);
+    setTimeout(done, 1300); // safety net if animationend doesn't fire
+  }
+
+  // Rough centroid (outer-ring average) — fallback when click coords are absent.
+  function centroidOf(f) {
+    const g = f && f.geometry;
+    if (!g) return [0, 0];
+    const ring = g.type === 'Polygon' ? g.coordinates[0] : (g.coordinates[0] && g.coordinates[0][0]);
+    if (!ring || !ring.length) return [0, 0];
+    let x = 0, y = 0;
+    for (const c of ring) { x += c[0]; y += c[1]; }
+    return [x / ring.length, y / ring.length];
+  }
 
   const ctrls = world.controls();
   // Auto-rotate OFF: globe.gl hides html pins on the far hemisphere, so a
