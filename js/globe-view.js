@@ -89,6 +89,10 @@ export function createGlobeView(container, opts) {
     el.append(dot, label);
     el.title = d.name + (d.status === 'visited' ? ' (visited)' : ' (wishlist)');
     el.addEventListener('click', e => { e.stopPropagation(); onPinClick(d); });
+    // Stop the tap from also reaching globe.gl's pointer handler on a parent —
+    // otherwise tapping a pin ALSO toggles the country underneath it.
+    ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart'].forEach(
+      ev => el.addEventListener(ev, e => e.stopPropagation(), { passive: true }));
     return el;
   }
 
