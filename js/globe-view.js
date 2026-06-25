@@ -20,6 +20,25 @@ const DARK_TEX =
 export const HEART_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.4-4.7-9.9-9.4C.6 8.1 2.4 4 6 4c2.1 0 3.4 1.1 4 2.1C10.6 5.1 11.9 4 14 4c3.6 0 5.4 4.1 3.9 7.6C19.4 16.3 12 21 12 21z"/></svg>';
 export const SPARK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.2 8.8L23 12l-8.8 2.2L12 23l-2.2-8.8L1 12l8.8-2.2z"/></svg>';
 
+// The click reward: an expanding ripple ring + a spark (heart on claim, sparkle
+// on release), both DOM overlays placed at (x,y) within `container`. Shared by
+// the globe and the US inset so the delight feels the same everywhere.
+export function spawnFx(container, x, y, adding) {
+  const cls = adding ? 'add' : 'remove';
+  const ripple = document.createElement('div');
+  ripple.className = 'globe-ripple ' + cls;
+  const spark = document.createElement('div');
+  spark.className = 'globe-spark ' + cls;
+  spark.innerHTML = adding ? HEART_SVG : SPARK_SVG;
+  for (const el of [ripple, spark]) {
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    container.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+    setTimeout(() => el.remove(), 1300); // safety net
+  }
+}
+
 export function createGlobeView(container, opts) {
   const { countries, getVisited, getDestinations, onRegionClick, onPinClick } = opts;
   const codeOf = f => (f.properties && f.properties.code) || '';
@@ -98,47 +117,14 @@ export function createGlobeView(container, opts) {
 
   world.width(container.clientWidth).height(container.clientHeight || 420);
 
-  // Rings layer = the "claim" ripple that pulses out from a clicked region.
-  let rings = [];
-  world
-    .ringColor(d => d.colorFn)
-    .ringMaxRadius(d => d.maxR)
-    .ringPropagationSpeed(d => d.speed)
-    .ringRepeatPeriod(() => 1e6) // one-shot: emit once, we drop the datum before it repeats
-    .ringAltitude(0.011)
-    .ringsData(rings);
-
-  // Dopamine on (un)claim: a ripple pulses out from the tapped point on the
-  // globe + a little spark pops in screen space. Tasteful, ~1s, self-cleaning.
+  // Dopamine on (un)claim: an expanding ripple + a spark pop at the tapped point.
+  // Done as DOM/CSS overlays (projected via getScreenCoords) rather than a
+  // globe.gl rings layer — the latter built no geometry in 2.46.1. Self-cleaning.
   function celebrate(lat, lng, adding) {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-    const rgb = adding ? '199,130,175' : '245,230,211'; // mauve claim / cream release
-    const a0 = adding ? 0.6 : 0.45;
-    const ring = {
-      lat, lng,
-      maxR: adding ? 4.2 : 3.4,
-      speed: adding ? 4 : 5,
-      colorFn: t => `rgba(${rgb},${(a0 * (1 - t)).toFixed(3)})`
-    };
-    rings = rings.concat(ring);
-    world.ringsData(rings);
-    setTimeout(() => { rings = rings.filter(r => r !== ring); world.ringsData(rings); }, 1200);
-    spawnSpark(lat, lng, adding);
-  }
-
-  function spawnSpark(lat, lng, adding) {
     let sc;
     try { sc = world.getScreenCoords(lat, lng, 0.02); } catch (e) { return; }
-    if (!sc) return;
-    const el = document.createElement('div');
-    el.className = 'globe-spark ' + (adding ? 'add' : 'remove');
-    el.innerHTML = adding ? HEART_SVG : SPARK_SVG; // inline SVG (no font-glyph dependency)
-    el.style.left = sc.x + 'px';
-    el.style.top = sc.y + 'px';
-    container.appendChild(el);
-    const done = () => el.remove();
-    el.addEventListener('animationend', done);
-    setTimeout(done, 1300); // safety net if animationend doesn't fire
+    if (sc) spawnFx(container, sc.x, sc.y, adding);
   }
 
   // Rough centroid (outer-ring average) — fallback when click coords are absent.

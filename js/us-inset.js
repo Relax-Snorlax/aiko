@@ -1,6 +1,6 @@
 // Flat SVG US map drill-in. Loads data/us-states.svg, wires state clicks,
 // and reflects visited state via CSS classes. Browser-only.
-import { HEART_SVG, SPARK_SVG } from './globe-view.js';
+import { spawnFx } from './globe-view.js';
 
 export async function createUsInset(container, opts) {
   const { getVisited, onStateClick } = opts;
@@ -14,8 +14,9 @@ export async function createUsInset(container, opts) {
     if (!path) return;
     const code = path.getAttribute('data-code');
     const adding = !getVisited().has(code); // claiming vs releasing — before toggle
-    // Same dopamine as the globe: a spark at the tap + a quick flash on the state.
-    spawnSpark(e.clientX, e.clientY, adding);
+    // Same dopamine as the globe: ripple + spark at the tap + a flash on the state.
+    const rect = container.getBoundingClientRect();
+    spawnFx(container, e.clientX - rect.left, e.clientY - rect.top, adding);
     path.classList.remove('just-claimed', 'just-released');
     void path.getBoundingClientRect(); // restart the CSS animation
     path.classList.add(adding ? 'just-claimed' : 'just-released');
@@ -23,20 +24,6 @@ export async function createUsInset(container, opts) {
     path.addEventListener('animationend', () => path.classList.remove('just-claimed', 'just-released'), { once: true });
     onStateClick(code);
   });
-
-  // Screen-space spark, mirrors globe-view's. Positioned within the inset.
-  function spawnSpark(clientX, clientY, adding) {
-    const rect = container.getBoundingClientRect();
-    const el = document.createElement('div');
-    el.className = 'globe-spark ' + (adding ? 'add' : 'remove');
-    el.innerHTML = adding ? HEART_SVG : SPARK_SVG;
-    el.style.left = (clientX - rect.left) + 'px';
-    el.style.top = (clientY - rect.top) + 'px';
-    container.appendChild(el);
-    const done = () => el.remove();
-    el.addEventListener('animationend', done);
-    setTimeout(done, 1300);
-  }
 
   function refresh() {
     const visited = getVisited();
