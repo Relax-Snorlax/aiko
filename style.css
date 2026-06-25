@@ -1549,6 +1549,31 @@ select.form-input { appearance: none; cursor: pointer; }
   color: #ffd9df;
 }
 
+/* Zoom-in place labels (HTML — crisp + haloed for clarity against the globe).
+   globe.gl centers each on its coordinate and hides far-side ones automatically. */
+.globe-label {
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, 0.95), 0 0 13px rgba(0, 0, 0, 0.8);
+}
+.globe-label.country { font-size: 13px; color: #f7ead8; }
+.globe-label.state { font-size: 11px; color: #ecd9e6; font-weight: 500; }
+.globe-label.poi { font-size: 10.5px; color: rgba(245, 230, 211, 0.9); font-weight: 500; }
+.globe-label.poi::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: #c782af;
+  vertical-align: middle;
+  box-shadow: 0 0 5px rgba(199, 130, 175, 0.95);
+}
+
 /* Add-destination hint + globe load fallback */
 .form-hint { font-size: 12px; color: #c782af; min-height: 16px; margin: 4px 0 8px; }
 .ow-fallback { padding: 36px; text-align: center; color: #b8b0a8; line-height: 1.7; }
