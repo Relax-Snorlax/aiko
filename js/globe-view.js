@@ -15,6 +15,11 @@ const THEME = {
 const DARK_TEX =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
+// Click-reward glyphs as inline SVG (fill = currentColor) so they render
+// identically everywhere — no reliance on a font having ♥/✦.
+export const HEART_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.4-4.7-9.9-9.4C.6 8.1 2.4 4 6 4c2.1 0 3.4 1.1 4 2.1C10.6 5.1 11.9 4 14 4c3.6 0 5.4 4.1 3.9 7.6C19.4 16.3 12 21 12 21z"/></svg>';
+export const SPARK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1l2.2 8.8L23 12l-8.8 2.2L12 23l-2.2-8.8L1 12l8.8-2.2z"/></svg>';
+
 export function createGlobeView(container, opts) {
   const { countries, getVisited, getDestinations, onRegionClick, onPinClick } = opts;
   const codeOf = f => (f.properties && f.properties.code) || '';
@@ -127,7 +132,7 @@ export function createGlobeView(container, opts) {
     if (!sc) return;
     const el = document.createElement('div');
     el.className = 'globe-spark ' + (adding ? 'add' : 'remove');
-    el.textContent = adding ? '♥' : '✦'; // ♥ claim / ✦ release
+    el.innerHTML = adding ? HEART_SVG : SPARK_SVG; // inline SVG (no font-glyph dependency)
     el.style.left = sc.x + 'px';
     el.style.top = sc.y + 'px';
     container.appendChild(el);
