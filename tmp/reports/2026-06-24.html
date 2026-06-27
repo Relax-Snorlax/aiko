@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeetaw Engineering — 24-Hour Progress Report</title>
+<meta name="description" content="A 24-hour engineering progress report from Jeetaw Manufacturing: an automatic quoting tool proven, the parts catalog overhauled, and the in-house AI setup improved.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Engineering-instrument palette: graphite, off-white, TIG-arc copper, steel */
+    --bg:        #14171c;
+    --bg-2:      #181c22;
+    --panel:     #1d222a;
+    --panel-2:   #222934;
+    --line:      #2c333d;
+    --line-soft: #242b34;
+    --ink:       #f1ece3;
+    --ink-soft:  #aeb6c0;
+    --ink-faint: #76808c;
+    --copper:    #e8954b;   /* heated-metal / TIG arc glow */
+    --copper-lo: #c9783a;
+    --steel:     #7fb0c9;   /* cool secondary */
+    --green:     #7fcca0;   /* success / done */
+    --radius:    16px;
+    --maxw:      720px;
+
+    /* Type stacks — Google Fonts with strong native fallbacks */
+    --serif: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono:  "Space Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.62;
+    color: var(--ink);
+    background-color: var(--bg);
+    /* Atmosphere: a warm arc-glow up top, cool depth below, faint blueprint grid */
+    background-image:
+      radial-gradient(120% 90% at 78% -8%, rgba(232,149,75,0.16), rgba(232,149,75,0) 55%),
+      radial-gradient(120% 80% at 0% 4%, rgba(127,176,201,0.10), rgba(127,176,201,0) 50%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  .wrap {
+    max-width: var(--maxw);
+    margin: 0 auto;
+    padding: 0 20px 64px;
+  }
+
+  /* ---- shared reveal-on-load animation ---- */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    animation: rise 0.7s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { animation: none; opacity: 1; transform: none; }
+    html { scroll-behavior: auto; }
+  }
+
+  /* =================== HEADER =================== */
+  header {
+    padding: 52px 0 34px;
+    position: relative;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--copper);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 22px;
+  }
+  .eyebrow .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--copper);
+    box-shadow: 0 0 0 0 rgba(232,149,75,0.55);
+    animation: pulse 2.6s ease-out infinite;
+  }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(232,149,75,0.5); }
+    70%  { box-shadow: 0 0 0 11px rgba(232,149,75,0); }
+    100% { box-shadow: 0 0 0 0 rgba(232,149,75,0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .eyebrow .dot { animation: none; } }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(2.15rem, 9vw, 3.4rem);
+    line-height: 1.04;
+    letter-spacing: -0.015em;
+    margin: 0 0 16px;
+    color: var(--ink);
+  }
+  h1 .accent { color: var(--copper); font-style: italic; }
+
+  .tagline {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.05rem, 4.4vw, 1.32rem);
+    line-height: 1.4;
+    color: var(--ink-soft);
+    margin: 0 0 26px;
+    max-width: 30ch;
+  }
+  .datestamp {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    letter-spacing: 0.06em;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+  }
+  .datestamp b { color: var(--ink-soft); font-weight: 700; }
+
+  /* =================== EXEC SUMMARY =================== */
+  .summary {
+    background:
+      linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--copper);
+    border-radius: var(--radius);
+    padding: 26px 24px;
+    margin-top: 8px;
+    box-shadow: 0 12px 40px -20px rgba(0,0,0,0.7);
+  }
+  .summary .label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--steel);
+    margin: 0 0 12px;
+  }
+  .summary p {
+    margin: 0;
+    font-size: 1.06rem;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .summary .punch {
+    margin-top: 14px;
+    font-family: var(--serif);
+    font-size: 1.12rem;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .summary .punch b { color: var(--copper); }
+
+  /* =================== SECTION TITLES =================== */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 56px 0 22px;
+  }
+  .section-label::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent);
+  }
+
+  /* =================== STAT STRIP =================== */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line-soft);
+    border-radius: 13px;
+    padding: 18px 16px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 26px; height: 2px;
+    background: var(--copper);
+    border-radius: 0 0 2px 0;
+  }
+  .stat .num {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(1.7rem, 7.5vw, 2.15rem);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    display: block;
+  }
+  .stat .num .unit { color: var(--copper); }
+  .stat .cap {
+    display: block;
+    margin-top: 9px;
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--ink-soft);
+  }
+  /* let the marquee stat span full width */
+  .stat.feature { grid-column: 1 / -1; }
+  .stat.feature .num { font-size: clamp(2.4rem, 13vw, 3rem); }
+  .stat.feature .cap { font-size: 13.5px; max-width: 34ch; }
+
+  /* =================== PROJECT CARDS =================== */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px 22px;
+    margin-bottom: 16px;
+    position: relative;
+    box-shadow: 0 14px 44px -26px rgba(0,0,0,0.8);
+  }
+  .card.flag {
+    border-left: 3px solid var(--copper);
+  }
+  .card-head {
+    display: flex;
+    align-items: baseline;
+    gap: 13px;
+    margin-bottom: 6px;
+  }
+  .card-num {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--copper);
+    flex: none;
+    padding-top: 2px;
+  }
+  .card h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(1.32rem, 5.6vw, 1.62rem);
+    line-height: 1.18;
+    letter-spacing: -0.01em;
+    margin: 0;
+    color: var(--ink);
+  }
+  .badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 100px;
+    margin: 12px 0 4px;
+  }
+  .badge.new    { color: #14171c; background: var(--copper); }
+  .badge.done   { color: var(--green);  border: 1px solid rgba(127,204,160,0.4); }
+  .badge.proven { color: var(--steel);  border: 1px solid rgba(127,176,201,0.4); }
+  .badge.wip    { color: var(--ink-soft); border: 1px solid var(--line); }
+
+  .card p { margin: 14px 0 0; color: var(--ink-soft); }
+  .card p strong { color: var(--ink); font-weight: 600; }
+  .card p .hot { color: var(--copper); font-weight: 600; }
+
+  /* a "spec line" — small labeled facts inside a card */
+  .specline {
+    margin-top: 18px;
+    border-top: 1px dashed var(--line);
+    padding-top: 16px;
+    display: grid;
+    gap: 12px;
+  }
+  .spec {
+    display: flex;
+    gap: 13px;
+    align-items: flex-start;
+  }
+  .spec .k {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    flex: none;
+    width: 76px;
+    padding-top: 3px;
+  }
+  .spec .v { color: var(--ink-soft); font-size: 15px; line-height: 1.5; }
+  .spec .v b { color: var(--ink); font-weight: 600; }
+
+  /* honest-status callout */
+  .status-note {
+    margin-top: 18px;
+    background: rgba(127,176,201,0.07);
+    border: 1px solid rgba(127,176,201,0.2);
+    border-radius: 11px;
+    padding: 14px 16px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .status-note b { color: var(--steel); }
+
+  /* =================== WHAT'S NEXT =================== */
+  .next {
+    background: linear-gradient(165deg, var(--panel-2), var(--bg-2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 22px;
+    margin-top: 12px;
+  }
+  .next h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 1.5rem;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .next > p {
+    margin: 0 0 18px;
+    color: var(--ink-faint);
+    font-size: 14.5px;
+  }
+  .next ul { list-style: none; margin: 0; padding: 0; }
+  .next li {
+    display: flex;
+    gap: 14px;
+    padding: 14px 0;
+    border-top: 1px solid var(--line-soft);
+    color: var(--ink-soft);
+  }
+  .next li:first-child { border-top: none; padding-top: 0; }
+  .next li .arrow {
+    color: var(--copper);
+    font-family: var(--mono);
+    font-weight: 700;
+    flex: none;
+  }
+  .next li b { color: var(--ink); font-weight: 600; }
+
+  /* =================== FOOTER =================== */
+  footer {
+    margin-top: 48px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    text-align: center;
+  }
+  footer .mark {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--ink-soft);
+    margin: 0 0 6px;
+  }
+  footer .gen {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    margin: 0;
+  }
+
+  /* =================== RESPONSIVE =================== */
+  @media (min-width: 560px) {
+    .stats { grid-template-columns: repeat(3, 1fr); }
+    .stat.feature { grid-column: 1 / -1; }
+  }
+  @media (max-width: 360px) {
+    body { font-size: 16px; }
+    .wrap { padding: 0 16px 56px; }
+    .card, .summary, .next { padding-left: 18px; padding-right: 18px; }
+    .spec .k { width: 64px; }
+  }
+
+  /* focus visibility for keyboard users */
+  a:focus-visible { outline: 2px solid var(--copper); outline-offset: 3px; border-radius: 3px; }
+
+  /* report index nav (rendered by nav.js) — themed to this report's palette */
+  #report-nav { padding-top: 18px; }
+  .rn { display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; border-bottom:1px solid var(--line); padding-bottom:14px; }
+  .rn-label { font-family:var(--mono); font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.18em; color:var(--ink-faint); margin-right:4px; }
+  .rn-item { font-family:var(--mono); font-size:11px; letter-spacing:0.04em; color:var(--ink-soft); text-decoration:none; padding:3px 0; border-bottom:1px solid transparent; }
+  .rn-item:hover { color:var(--copper); border-bottom-color:var(--copper); }
+  .rn-item.is-current { color:var(--ink); font-weight:700; border-bottom-color:var(--ink); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- report index nav (populated by nav.js from index.json) -->
+  <div id="report-nav" aria-label="Report navigation"></div>
+
+  <!-- ===================== HEADER ===================== -->
+  <header>
+    <p class="eyebrow reveal" style="animation-delay:.05s"><span class="dot" aria-hidden="true"></span>Jeetaw Engineering · Progress Log</p>
+    <h1 class="reveal" style="animation-delay:.12s">24-Hour <span class="accent">Progress</span> Report</h1>
+    <p class="tagline reveal" style="animation-delay:.2s">One day of engineering, told in plain language — what we built, why it matters, and what's coming.</p>
+    <p class="datestamp reveal" style="animation-delay:.28s">
+      <span><b>Reporting window:</b> Last 24 hours</span>
+      <span><b>Issued:</b> June 24, 2026</span>
+    </p>
+  </header>
+
+  <!-- ===================== EXEC SUMMARY ===================== -->
+  <section class="summary reveal" style="animation-delay:.34s" aria-labelledby="sum-h">
+    <p class="label" id="sum-h">Executive Summary</p>
+    <p>In the last 24 hours we built and proved the core of an <strong>automatic quoting tool</strong>, overhauled the data behind our parts catalog, and improved our in-house AI setup.</p>
+    <p class="punch">The headline: software that reads a customer's 3D model and prices the job <b>within 20% of an expert, 83% of the time</b> — turning a "could we automate quoting?" question into a proven yes.</p>
+  </section>
+
+  <!-- ===================== STAT STRIP ===================== -->
+  <h2 class="section-label reveal" style="animation-delay:.4s">By The Numbers</h2>
+  <div class="stats">
+    <div class="stat feature reveal" style="animation-delay:.44s">
+      <span class="num">83<span class="unit">%</span></span>
+      <span class="cap">of quotes priced within 20% of a human expert</span>
+    </div>
+    <div class="stat reveal" style="animation-delay:.5s">
+      <span class="num">4,214</span>
+      <span class="cap">real past quotes used to test it</span>
+    </div>
+    <div class="stat reveal" style="animation-delay:.55s">
+      <span class="num">734<span class="unit">K</span></span>
+      <span class="cap">price data points recovered</span>
+    </div>
+    <div class="stat reveal" style="animation-delay:.6s">
+      <span class="num">7,840</span>
+      <span class="cap">past quote sheets mined</span>
+    </div>
+    <div class="stat reveal" style="animation-delay:.65s">
+      <span class="num">459</span>
+      <span class="cap">purchase orders pulled from QuickBooks</span>
+    </div>
+    <div class="stat reveal" style="animation-delay:.7s">
+      <span class="num">2.5<span class="unit">×</span></span>
+      <span class="cap">growth in catalog price coverage</span>
+    </div>
+  </div>
+
+  <!-- ===================== SECTION 1 ===================== -->
+  <h2 class="section-label reveal">The Work</h2>
+
+  <article class="card flag reveal" aria-labelledby="s1">
+    <div class="card-head">
+      <span class="card-num">01</span>
+      <h2 id="s1">The Automatic Quoting Tool</h2>
+    </div>
+    <span class="badge new">New This Period · The Big One</span>
+
+    <p><strong>The problem.</strong> Jeetaw gets a constant stream of requests-for-quote from <span class="hot">Applied Materials</span>. Each one takes about <strong>30 minutes</strong> of an expert reading drawings and 3D models, working out the tubes, bends, and welds needed — then pricing it by hand.</p>
+
+    <p><strong>What we built.</strong> Software that opens the customer's 3D model file and automatically detects the tubes (count and lengths), the bends, and the welds — and flags parts that can't be built. The slow, expensive part of quoting, now done in <span class="hot">a fraction of a second</span>.</p>
+
+    <p><strong>How we proved it.</strong> We tested it against <strong>4,214 real past quotes</strong>. Its price landed within 20% of what a human actually charged on <span class="hot">83% of them</span> — good enough to use as a reviewed first draft.</p>
+
+    <div class="status-note">
+      <b>Honest status:</b> we built the engine, not the whole car. It works and it's proven — but it doesn't have a point-and-click screen yet, so it isn't in daily use. Next up: a simple web interface and one final data-reading step.
+    </div>
+  </article>
+
+  <!-- ===================== SECTION 2 ===================== -->
+  <article class="card reveal" aria-labelledby="s2">
+    <div class="card-head">
+      <span class="card-num">02</span>
+      <h2 id="s2">The Parts Catalog Overhaul</h2>
+    </div>
+    <span class="badge done">Major Progress</span>
+
+    <p><strong>The catalog.</strong> Jeetaw keeps a digital catalog of every fitting it uses. The catalog app itself was built fresh this period — about <strong>3,748 parts</strong>.</p>
+
+    <p><strong>The gap we found.</strong> It was missing prices on roughly <span class="hot">92% of parts</span> — essentially a catalog with no price tags.</p>
+
+    <p><strong>The fix came from two places:</strong></p>
+
+    <div class="specline">
+      <div class="spec">
+        <span class="k">Source 1</span>
+        <span class="v">Every old quote spreadsheet secretly held our own price list. We recovered <b>~734,000 price data points</b> from <b>7,840 old quotes</b>.</span>
+      </div>
+      <div class="spec">
+        <span class="k">Source 2</span>
+        <span class="v">We connected to <b>QuickBooks</b> and pulled 2 years of purchase orders — <b>459 of them</b> — for accurate supplier costs from <b>Banner, Swagelok, Hytron</b> and others.</span>
+      </div>
+    </div>
+
+    <p style="margin-top:18px"><strong>The result.</strong> The catalog went from almost no pricing to having real supplier costs and sale prices on hundreds of parts — including the specialized <strong>Hytron modular fittings</strong> used constantly in assemblies. Everything is documented so the work can continue.</p>
+  </article>
+
+  <!-- ===================== SECTION 3 ===================== -->
+  <article class="card reveal" aria-labelledby="s3">
+    <div class="card-head">
+      <span class="card-num">03</span>
+      <h2 id="s3">In-House AI Setup</h2>
+    </div>
+    <span class="badge proven">Infrastructure</span>
+
+    <div class="specline" style="border-top:none;padding-top:8px">
+      <div class="spec">
+        <span class="k">Private</span>
+        <span class="v">Installed a private, ChatGPT-style chat interface running entirely on <b>Jeetaw's own hardware</b> — no data leaves the building.</span>
+      </div>
+      <div class="spec">
+        <span class="k">Faster</span>
+        <span class="v">Sped up the local AI model with a <b>performance technique</b> that generates answers more efficiently.</span>
+      </div>
+      <div class="spec">
+        <span class="k">Tooling</span>
+        <span class="v">Improved the internal <b>app launcher</b> that starts and manages all the in-house tools.</span>
+      </div>
+    </div>
+  </article>
+
+  <!-- ===================== SECTION 4 ===================== -->
+  <article class="card reveal" aria-labelledby="s4">
+    <div class="card-head">
+      <span class="card-num">04</span>
+      <h2 id="s4">Housekeeping</h2>
+    </div>
+    <span class="badge done">Fixed</span>
+    <p>Fixed a sync bug in the task-management system that had been silently creating hundreds of duplicate tasks. Cleaned up <span class="hot">231 duplicates</span>.</p>
+  </article>
+
+  <!-- ===================== WHAT'S NEXT ===================== -->
+  <h2 class="section-label reveal">Looking Ahead</h2>
+  <section class="next reveal" aria-labelledby="next-h">
+    <h2 id="next-h">What's Next</h2>
+    <p>The momentum is on the quoting tool and the data behind it.</p>
+    <ul>
+      <li><span class="arrow" aria-hidden="true">&rarr;</span><span><b>Finish the quoting tool.</b> Add a simple web screen and connect the final step that reads the customer's parts list automatically — then re-test end to end.</span></li>
+      <li><span class="arrow" aria-hidden="true">&rarr;</span><span><b>Keep enriching the catalog.</b> Layer in more supplier and pricing data so every part carries an accurate price tag.</span></li>
+    </ul>
+  </section>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer>
+    <p class="mark">Built one day at a time.</p>
+    <p class="gen">Generated June 24, 2026</p>
+  </footer>
+
+</div>
+<script src="nav.js"></script>
+</body>
+</html>
